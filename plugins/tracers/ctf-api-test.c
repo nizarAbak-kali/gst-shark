@@ -82,10 +82,10 @@ void CTFDataStreamGenerate(FILE *fd, char * UUID,int UUID_size, uint64_t content
      */
      
     /* Content size */
-    content_size = 0x88090000;
+    content_size = 0x000003e800000000;
     fwrite(&content_size,sizeof(char),sizeof(uint64_t),fd);
     /* Packet size */
-    packet_size = 262144;
+    packet_size = 0x0004000000000000;  /* 262144 = 0x40000 */
     fwrite(&packet_size,sizeof(char),sizeof(uint64_t),fd);
     /* ? ? ? ? */
     uint32_t unknown = 0;
@@ -119,7 +119,7 @@ char * msg)
 {
     int size = strlen(msg);
     /* Add event ID*/
-    fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
+    //~ fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
     
     fwrite(&timestamp,sizeof(char),sizeof(uint64_t),fd);
     fwrite(msg,sizeof(char),size+1,fd);
