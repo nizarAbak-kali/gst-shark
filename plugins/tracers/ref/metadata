@@ -1,5 +1,6 @@
 /* CTF 1.8 */
 typealias integer { size = 8; align = 8; signed = false; } := uint8_t;
+typealias integer { size = 16; align = 16; signed = false; } := uint16_t;
 typealias integer { size = 32; align = 32; signed = false; } := uint32_t;
 typealias integer { size = 64; align = 64; signed = false; } := uint64_t;
 
@@ -26,13 +27,8 @@ stream {
 };
 
 event {
-	name = cfg80211;
-	id = 1;
-	fields := struct { string str; };
-};
-
-event {
-	name = brcmsmac;
+	name = cpuusage;
 	id = 0;
 	fields := struct { string str; };
 };
+
