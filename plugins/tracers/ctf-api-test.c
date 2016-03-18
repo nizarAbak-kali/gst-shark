@@ -11,8 +11,9 @@ typedef enum {
 } event_id;
 
 int Magic = 0xC1FC1FC1;
-char UUID[] = {0xB2,0x96,0x90,0x8F,0xBF,0x96,0x42,0x33,0x94,0xD9,0xD8,0x55,0x4D,0x16,0xBC,0x7A};
-char * UUIDstring = "b296908f-bf96-4233-94d9-d8554d16bc7a";
+
+char UUID[] = {0x67,0xE1,0x89,0xCE,0xA4,0xA0,0x49,0x04,0x83,0x70,0x3B,0xFE,0xFF,0xF3,0x6A,0xDC};
+char * UUIDstring = "67e189ce-a4a0-4904-8370-3bfefff36adc";
 
 /* Metadata format string */
 static const char metadata_fmt[] =
@@ -40,7 +41,7 @@ static const char metadata_fmt[] =
 "	};\n"
 "	typealias integer { size = 64; align = 64; signed = false; } := uint64_t;\n"
 "	event.header := struct {\n"
-"		enum : uint16_t { compact = 0 ... 65534, extended = 65535 } id;\n"
+//~ "		enum : uint16_t { compact = 0 ... 65534, extended = 65535 } id;\n"
 "		uint64_t timestamp;\n"
 "	};\n"					/* Stream event header (opt.) */
 "};\n"
@@ -100,7 +101,7 @@ void CTFMetadataGenerate(FILE *fd, int major, int minor, char * UUID, int byte_o
     major, /* major */
     minor, /* minor */
     UUIDstring,
-    byte_order ? "be" : "le"
+    byte_order ? "le" : "be"
     );
 }
 
@@ -117,6 +118,7 @@ void CTFNewCpuUsageEvent(FILE *fd, int16_t event_id, uint64_t timestamp,
 char * msg)
 {
     int size = strlen(msg);
+    /* Add event ID*/
     fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
     
     fwrite(&timestamp,sizeof(char),sizeof(uint64_t),fd);
@@ -145,14 +147,15 @@ int main (void)
 
     /* Create datastream file */
     
-    fd = fopen("file.ctf", "w");
+    fd = fopen("datastream", "w");
     
     CTFDataStreamGenerate(fd, UUID,sizeof(UUID),0,0);
     
     /* Add events */
     
-    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAA, "Event1-message"); 
-    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xBB, "Event2-message"); 
+    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699E005810, "cpuusage 0 0.50"); 
+    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699E26F6C8, "proctime queue0 1000"); 
+    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699EC73638, "proctime queue2 2000"); 
      
     fclose(fd);
     
