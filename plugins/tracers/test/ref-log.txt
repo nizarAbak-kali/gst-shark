@@ -1,0 +1,3 @@
+[190669.133994] cpuusage 0 0.50
+[190669.136525] proctime queue0 1000
+[190669.147027] proctime queue2 2000
