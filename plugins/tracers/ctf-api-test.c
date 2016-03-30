@@ -209,8 +209,8 @@ int main (void)
     /* Add events */
 
     CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699E005810, "cpuusage 0 0.50");
-    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699E26F6C8, "proctime queue0 1000");
-    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699EC73638, "proctime queue2 2000");
+    CTFNewProcTimeEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699E26F6C8, "proctime queue0 1000");
+    CTFNewProcTimeEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699EC73638, "proctime queue2 2000");
 
     //~ CTFDataStreamPading(fd);
 
