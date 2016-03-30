@@ -36,8 +36,8 @@ static const char metadata_fmt[] =
 "\n"
 "stream {\n"
 "	packet.context := struct {\n"
-"		uint64_t content_size;\n"
-"		uint64_t packet_size;\n"
+//~ "		uint64_t content_size;\n"
+//~ "		uint64_t packet_size;\n"
 "	};\n"
 "	typealias integer { size = 64; align = 64; signed = false; } := uint64_t;\n"
 "	event.header := struct {\n"
@@ -56,11 +56,15 @@ static const char cpuusage_metadata_event_header[] =
 "};\n"
 "\n";
 
-static const char metadata_stream_event_header_timestamp[] =
-"	typealias integer { size = 64; align = 64; signed = false; } := uint64_t;\n"
-"	event.header := struct {\n"
-"		uint64_t timestamp;\n"
-"	};\n";
+
+static const char proctime_metadata_event_header[] =
+"event {\n"
+"	name = proctime;\n"
+"	id = %d;\n"
+"	fields := struct { string str; };\n"
+"};\n"
+"\n";
+
 
 
 /*
@@ -83,10 +87,10 @@ void CTFDataStreamGenerate(FILE *fd, char * UUID,int UUID_size, uint64_t content
 
     /* Content size */
     content_size = 0x000003e800000000;
-    fwrite(&content_size,sizeof(char),sizeof(uint64_t),fd);
+    //~ fwrite(&content_size,sizeof(char),sizeof(uint64_t),fd);
     /* Packet size */
     packet_size = 0x0004000000000000;  /* 262144 = 0x40000 */
-    fwrite(&packet_size,sizeof(char),sizeof(uint64_t),fd);
+    //~ fwrite(&packet_size,sizeof(char),sizeof(uint64_t),fd);
     /* ? ? ? ? */
     uint32_t unknown = 0;
     fwrite(&unknown,sizeof(char),sizeof(uint32_t),fd);
@@ -153,6 +157,32 @@ char * msg)
 }
 
 
+void CTFNewProcTimeEvent(FILE *fd, int16_t event_id, uint64_t timestamp,
+//~ int cpu_num, double usage)
+char * msg)
+{
+    int size = strlen(msg);
+    /* Add event ID*/
+    //~ fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
+
+    fwrite(&timestamp,sizeof(char),sizeof(uint64_t),fd);
+    fwrite(msg,sizeof(char),size+1,fd);
+
+    /* Verify if padding must be added */
+    int pad_num = (size+1)%8;
+    char zero=0;
+    if (pad_num != 0)
+    {
+        pad_num = 8 - pad_num;
+
+        for (;pad_num > 0; --pad_num)
+        {
+            fwrite(&zero,sizeof(char),1,fd);
+        }
+    }
+}
+
+
 int main (void)
 {
     FILE* fd;
@@ -182,7 +212,7 @@ int main (void)
     CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699E26F6C8, "proctime queue0 1000");
     CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699EC73638, "proctime queue2 2000");
 
-    CTFDataStreamPading(fd);
+    //~ CTFDataStreamPading(fd);
 
     fclose(fd);
 
