@@ -7,7 +7,7 @@
 #define BYTE_ORDER_LE (1)
 
 typedef enum {
-    TIMER_INIT_EVENT_ID=0,
+    TIMER_INIT_EVENT_ID,
     CPUUSAGE_EVENT_ID,
     PROCTIME_EVENT_ID,
     LATENCY_EVENT_ID,
@@ -213,13 +213,31 @@ static const char cpuusage_metadata_event_header[] =
 \n";
 
 
-static const char proctime_metadata_event_header[] =
-"event {\n"
-"	name = proctime;\n"
-"	id = %d;\n"
-"	fields := struct { string str; };\n"
-"};\n"
-"\n";
+static const char proctime_metadata_event_header[] = "\
+event {\n\
+        name = proctime;\n\
+        id = %d;\n\
+        stream_id = 0;\n\
+        fields := struct {\n\
+                integer { size = 8; align = 8; signed = 1; encoding = UTF8; base = 10; } _element[16];\n\
+                integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _time;\n\
+        };\n\
+};\n\
+";
+
+static const char fps_metadata_event_header[] = "\
+event {\n\
+        name = framerate;\n\
+        id = %d;\n\
+        stream_id = 0;\n\
+        fields := struct {\n\
+                integer { size = 8; align = 8; signed = 1; encoding = UTF8; base = 10; } _element[16];\n\
+                integer { size = 32; align = 8; signed = 0; encoding = none; base = 10; } _fps;\n\
+        };\n\
+};\n\
+";
+
+
 
 
 
@@ -300,10 +318,10 @@ void CTFMetadataGenerate(FILE *fd, int major, int minor, char * UUID, int byte_o
 }
 
 
-void CTFMetadataAddEvent(FILE *fd, const char* metadata_event, int event_id)
+void CTFMetadataAddEvent(FILE *fd, const char* metadata_event, event_id id)
 {
     fprintf(fd, metadata_event,
-    event_id
+    id
     );
 }
 
@@ -318,34 +336,65 @@ void CTFNewCpuUsageEvent(FILE *fd, int16_t event_id, uint32_t timestamp, int32_t
     fwrite(&num,sizeof(char),sizeof(uint32_t),fd);
     
     fwrite(&usage,sizeof(char),sizeof(uint64_t),fd);
-
-
 }
 
 
-void CTFNewProcTimeEvent(FILE *fd, int16_t event_id, uint64_t timestamp,
-//~ int cpu_num, double usage)
-char * msg)
+void CTFNewProcTimeEvent(FILE *fd, int16_t event_id, uint32_t timestamp, char * element, int64_t time)
 {
-    int size = strlen(msg);
-    /* Add event ID*/
-    //~ fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
+    
+    fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
 
-    fwrite(&timestamp,sizeof(char),sizeof(uint64_t),fd);
-    fwrite(msg,sizeof(char),size+1,fd);
+    fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
+    
+    /*************************************************/
+    int size = strlen(element);
+
+    fwrite(element,sizeof(char),size+1,fd);
 
     /* Verify if padding must be added */
-    int pad_num = (size+1)%8;
+    int pad_num = (size+1)%16;
     char zero=0;
     if (pad_num != 0)
     {
-        pad_num = 8 - pad_num;
+        pad_num = 16 - pad_num;
 
         for (;pad_num > 0; --pad_num)
         {
             fwrite(&zero,sizeof(char),1,fd);
         }
     }
+    /*************************************************/
+
+    fwrite(&time,sizeof(char),sizeof(int64_t),fd);
+}
+
+void CTFNewFPSEvent(FILE *fd, int16_t event_id, uint32_t timestamp, char * element, int32_t fps)
+{
+    
+    fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
+
+    fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
+    
+    /*************************************************/
+    int size = strlen(element);
+
+    fwrite(element,sizeof(char),size+1,fd);
+
+    /* Verify if padding must be added */
+    int pad_num = (size+1)%16;
+    char zero=0;
+    if (pad_num != 0)
+    {
+        pad_num = 16 - pad_num;
+
+        for (;pad_num > 0; --pad_num)
+        {
+            fwrite(&zero,sizeof(char),1,fd);
+        }
+    }
+    /*************************************************/
+
+    fwrite(&fps,sizeof(char),sizeof(int32_t),fd);
 }
 
 
@@ -498,7 +547,9 @@ int main (void)
 
     CTFMetadataGenerate(FDMetadata, 1, 3, UUID, BYTE_ORDER_LE);
     /* Add event descriptor */
-    CTFMetadataAddEvent(FDMetadata,cpuusage_metadata_event_header,2);
+    CTFMetadataAddEvent(FDMetadata,cpuusage_metadata_event_header,CPUUSAGE_EVENT_ID);
+    CTFMetadataAddEvent(FDMetadata,proctime_metadata_event_header,PROCTIME_EVENT_ID);
+    CTFMetadataAddEvent(FDMetadata,fps_metadata_event_header,FPS_EVENT_ID);
 
     fclose(FDMetadata);
 
@@ -512,30 +563,35 @@ int main (void)
 
     /* Add events */
     CTFNewTimerInitEvent(fd, 0, 0xdce73fb4, 3811704140);
-    CTFNewTimerStartEvent(fd, 11, 0xdce74686, 3811704140,3238389056,996799,994299);
+    //~ CTFNewTimerStartEvent(fd, 11, 0xdce74686, 3811704140,3238389056,996799,994299);
+    //~ 
+    //~ CTFNewSchedStatEvent(fd, 37, 0xdce74e29,
+    //~ "lttng-sessiond",
+    //~ 4072,
+    //~ 584455,
+    //~ 467336417);
+    //~ 
+    //~ 
+    //~ CTFNewSchedwitchEvent(fd, 27, 0xdce75ece,
+    //~ "lttng-sessiond",
+    //~ 4072,
+    //~ 20,
+    //~ 1,
+    //~ "swapper",
+    //~ 0,
+    //~ 20);
     
-    CTFNewSchedStatEvent(fd, 37, 0xdce74e29,
-    "lttng-sessiond",
-    4072,
-    584455,
-    467336417);
+    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 10, 0, 11);
+    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 20, 1, 22);
+    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 30, 2, 33);
+    CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 40, 3, 44);
     
     
-    CTFNewSchedwitchEvent(fd, 27, 0xdce75ece,
-    "lttng-sessiond",
-    4072,
-    20,
-    1,
-    "swapper",
-    0,
-    20);
+    CTFNewProcTimeEvent(fd, PROCTIME_EVENT_ID, 10, "identity0", 1000);
+    CTFNewProcTimeEvent(fd, PROCTIME_EVENT_ID, 20, "queue0", 100);
+    CTFNewProcTimeEvent(fd, PROCTIME_EVENT_ID, 30, "identity1", 1500);
     
-    CTFNewCpuUsageEvent(fd, 2, 0, 4, 75);
-    
-    //~ CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699E005810, "cpuusage 0 0.50");
-    //~ CTFNewProcTimeEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699E26F6C8, "proctime queue0 1000");
-    //~ CTFNewProcTimeEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699EC73638, "proctime queue2 2000");
-
+    CTFNewFPSEvent(fd, FPS_EVENT_ID, 10, "filesrc0", 15);
 
     fclose(fd);
 
