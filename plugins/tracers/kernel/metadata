@@ -57,8 +57,6 @@ struct packet_context {
 	uint64_clock_monotonic_t timestamp_begin;
 	uint64_clock_monotonic_t timestamp_end;
 	uint32_t events_discarded;
-	uint32_t content_size;
-	uint32_t packet_size;
 	uint32_t cpu_id;
 };
 
