@@ -7,15 +7,20 @@
 #define BYTE_ORDER_LE (1)
 
 typedef enum {
+    TIMER_INIT_EVENT_ID=0,
     CPUUSAGE_EVENT_ID,
     PROCTIME_EVENT_ID,
+    LATENCY_EVENT_ID,
+    FPS_EVENT_ID,
+    PIPELINE_GRAPH_EVENT_ID,
+    SCHED_TIME_EVENT_ID,
     
 } event_id;
 
 int Magic = 0xC1FC1FC1; // 0xc11ffcc1
 char UUID[] = {0xd1,0x8e,0x63,0x74,0x35,0xa1,0xcd,0x42,0x8e,0x70,0xa9,0xcf,0xfa,0x71,0x27,0x93};
 //~ char UUID[] = {0x67,0xE1,0x89,0xCE,0xA4,0xA0,0x49,0x04,0x83,0x70,0x3B,0xFE,0xFF,0xF3,0x6A,0xDC};
-char * UUIDstring = "67e189ce-a4a0-4904-8370-3bfefff36adc";
+char * UUIDstring = "d18e6374-35a1-cd42-8e70-a9cffa712793";
 
 /* Metadata format string */
 static const char metadata_fmt2[] = "\
@@ -28,10 +33,10 @@ typealias integer { size = 5; align = 1; signed = false; } := uint5_t;\n\
 typealias integer { size = 27; align = 1; signed = false; } := uint27_t;\n\
 \n\
 trace {\n\
-	major = 1;\n\
-	minor = 8;\n\
-	uuid = \"d18e6374-35a1-cd42-8e70-a9cffa712793\";\n\
-	byte_order = le;\n\
+	major = %u;\n\
+	minor = %u;\n\
+	uuid = \"%s\";\n\
+	byte_order = %s;\n\
 	packet.header := struct {\n\
 		uint32_t magic;\n\
 		uint8_t  uuid[16];\n\
@@ -142,7 +147,7 @@ event {\n\
 \n\
 event {\n\
 	name = timer_start;\n\
-	id = 1;\n\
+	id = 11;\n\
 	stream_id = 0;\n\
 	fields := struct {\n\
 		integer { size = 32; align = 8; signed = 0; encoding = none; base = 10; } _timer;\n\
@@ -286,14 +291,12 @@ void CTFMetadataGenerate(FILE *fd, int major, int minor, char * UUID, int byte_o
     /* Convert UUID */
     //~ bt_uuid_unparse(UUID, UUIDstring);
     
-    fprintf(fd, metadata_fmt2);
-
-    //~ fprintf(fd, metadata_fmt,
-    //~ major, /* major */
-    //~ minor, /* minor */
-    //~ UUIDstring,
-    //~ byte_order ? "le" : "be"
-    //~ );
+    fprintf(fd, metadata_fmt2,
+    major, /* major */
+    minor, /* minor */
+    UUIDstring,
+    byte_order ? "le" : "be"
+    );
 }
 
 
@@ -509,7 +512,7 @@ int main (void)
 
     /* Add events */
     CTFNewTimerInitEvent(fd, 0, 0xdce73fb4, 3811704140);
-    CTFNewTimerStartEvent(fd, 1, 0xdce74686, 3811704140,3238389056,996799,994299);
+    CTFNewTimerStartEvent(fd, 11, 0xdce74686, 3811704140,3238389056,996799,994299);
     
     CTFNewSchedStatEvent(fd, 37, 0xdce74e29,
     "lttng-sessiond",
