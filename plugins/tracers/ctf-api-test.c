@@ -8,6 +8,8 @@
 
 typedef enum {
     CPUUSAGE_EVENT_ID,
+    PROCTIME_EVENT_ID,
+    
 } event_id;
 
 int Magic = 0xC1FC1FC1; // 0xc11ffcc1
@@ -195,12 +197,15 @@ static const char metadata_fmt[] =
 
 
 static const char cpuusage_metadata_event_header[] =
-"event {\n"
-"	name = cpuusage;\n"
-"	id = %d;\n"
-"	fields := struct { string str; };\n"
-"};\n"
-"\n";
+"event {\n\
+	name = cpuusage;\n\
+	id = %d;\n\
+	fields := struct {\n\
+		integer { size = 32; align = 8; signed = 0; encoding = none; base = 10; } _num;\n\
+		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _usage;\n\
+	};\n\
+};\n\
+\n";
 
 
 static const char proctime_metadata_event_header[] =
@@ -299,32 +304,19 @@ void CTFMetadataAddEvent(FILE *fd, const char* metadata_event, int event_id)
     );
 }
 
-void CTFNewCpuUsageEvent(FILE *fd, int16_t event_id, uint64_t timestamp,
-//~ int cpu_num, double usage)
-char * msg)
+void CTFNewCpuUsageEvent(FILE *fd, int16_t event_id, uint32_t timestamp, int32_t num, int64_t usage)
+
 {
-    int size = strlen(msg);
+        //~ int size = strlen(msg);
     /* Add event ID*/
-    //~ fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
-
-    fwrite(&timestamp,sizeof(char),sizeof(uint64_t),fd);
-    fwrite(msg,sizeof(char),size+1,fd);
-
-    /* Verify if padding must be added */
-    int pad_num = (size+1)%8;
-    char zero=0;
-    if (pad_num != 0)
-    {
-        pad_num = 8 - pad_num;
-
-        for (;pad_num > 0; --pad_num)
-        {
-            fwrite(&zero,sizeof(char),1,fd);
-        }
-    }
+    fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
+    fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
+    
+    fwrite(&num,sizeof(char),sizeof(uint32_t),fd);
+    
+    fwrite(&usage,sizeof(char),sizeof(uint64_t),fd);
 
 
-    //~ fprintf(fd,"%s",msg);
 }
 
 
@@ -503,7 +495,7 @@ int main (void)
 
     CTFMetadataGenerate(FDMetadata, 1, 3, UUID, BYTE_ORDER_LE);
     /* Add event descriptor */
-    //~ CTFMetadataAddEvent(FDMetadata,cpuusage_metadata_event_header,CPUUSAGE_EVENT_ID);
+    CTFMetadataAddEvent(FDMetadata,cpuusage_metadata_event_header,2);
 
     fclose(FDMetadata);
 
@@ -535,11 +527,12 @@ int main (void)
     0,
     20);
     
+    CTFNewCpuUsageEvent(fd, 2, 0, 4, 75);
+    
     //~ CTFNewCpuUsageEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699E005810, "cpuusage 0 0.50");
     //~ CTFNewProcTimeEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699E26F6C8, "proctime queue0 1000");
     //~ CTFNewProcTimeEvent(fd, CPUUSAGE_EVENT_ID, 0xAD699EC73638, "proctime queue2 2000");
 
-    //~ CTFDataStreamPading(fd);
 
     fclose(fd);
 

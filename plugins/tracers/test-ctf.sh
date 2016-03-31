@@ -8,7 +8,7 @@ echo "Create matadata and datastream"
 
 echo "Compare ref datastream and test datastream" 
 cp datastream metadata test
-./compare.sh
+#~ ./compare.sh
 
 echo "Read the CTF file generated with babeltrace" 
 babeltrace ./test
