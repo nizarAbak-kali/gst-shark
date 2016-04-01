@@ -45,14 +45,6 @@ trace {\n\
 };\n\
 \n\
 \n\
-clock {\n\
-	name = monotonic;\n\
-	uuid = \"84db105b-b3f4-4821-b662-efc51455106a\";\n\
-	description = \"Monotonic Clock\";\n\
-	freq = 1000000000; /* Frequency, in Hz */\n\
-	/* clock value offset from Epoch is: offset * (1/freq) */\n\
-	offset = 1332166405241713987;\n\
-};\n\
 \n\
 typealias integer {\n\
 	size = 27; align = 1; signed = false;\n\
@@ -79,11 +71,11 @@ struct event_header_compact {\n\
 	enum : uint5_t { compact = 0 ... 30, extended = 31 } id;\n\
 	variant <id> {\n\
 		struct {\n\
-			uint27_clock_monotonic_t timestamp;\n\
+			uint27_t timestamp;\n\
 		} compact;\n\
 		struct {\n\
 			uint32_t id;\n\
-			uint64_clock_monotonic_t timestamp;\n\
+			uint64_t timestamp;\n\
 		} extended;\n\
 	} v;\n\
 } align(8);\n\
@@ -92,11 +84,11 @@ struct event_header_large {\n\
 	enum : uint16_t { compact = 0 ... 65534, extended = 65535 } id;\n\
 	variant <id> {\n\
 		struct {\n\
-			uint32_clock_monotonic_t timestamp;\n\
+			uint32_t timestamp;\n\
 		} compact;\n\
 		struct {\n\
 			uint32_t id;\n\
-			uint64_clock_monotonic_t timestamp;\n\
+			uint64_t timestamp;\n\
 		} extended;\n\
 	} v;\n\
 } align(8);\n\
@@ -199,7 +191,7 @@ void CTFDataStreamGenerate(FILE *fd, char * UUID,int UUID_size, uint64_t content
     uint64_t time_stamp_begin;
     uint64_t time_stamp_end;
     uint32_t events_discarted;
-    uint32_t cpi_id;
+    //~ uint32_t cpi_id;
     uint32_t stream_id;
     /* http://diamon.org/ctf/,
      * Section 5. Event packet header
@@ -229,7 +221,7 @@ void CTFDataStreamGenerate(FILE *fd, char * UUID,int UUID_size, uint64_t content
     fwrite(&events_discarted,sizeof(char),sizeof(uint32_t),fd);
     
     //~ cpi_id = 0xDDDDDDDD;
-    cpi_id = 0x0;
+    //~ cpi_id = 0x0;
     //~ fwrite(&cpi_id,sizeof(char),sizeof(uint32_t),fd);
     
     /* Content size */
@@ -358,7 +350,8 @@ void CTFNewTimerInitEvent(FILE *fd, int16_t event_id, uint32_t timestamp, int32_
 
     fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
     
-    unknown = 0x000003e3;
+    //~ unknown = 0x000003e3;
+    unknown = 0;
     fwrite(&unknown,sizeof(char),sizeof(uint32_t),fd);
     
     fwrite(&timer,sizeof(char),sizeof(uint32_t),fd);
@@ -391,7 +384,7 @@ int main (void)
     CTFDataStreamGenerate(fd, UUID,sizeof(UUID),0,0);
 
     /* Add events */
-    CTFNewTimerInitEvent(fd, 0, 0xdce73fb4, 3811704140);
+    CTFNewTimerInitEvent(fd, 0, 0, 0);
     //~ CTFNewTimerStartEvent(fd, 11, 0xdce74686, 3811704140,3238389056,996799,994299);
     //~ 
     //~ CTFNewSchedStatEvent(fd, 37, 0xdce74e29,
@@ -423,7 +416,16 @@ int main (void)
     CTFNewFPSEvent(fd, FPS_EVENT_ID, 10, "filesrc0", 15);
 
     fclose(fd);
-
+    
+    
+    /******************************************************************/
+#if 0
+    GstClockTime time;
+    
+    startTime = gst_util_get_timestamp ();
+    
+    g_printf ("%" GST_TIME_FORMAT, GST_TIME_ARGS (time));
+#endif
 
     return 0;
 }
