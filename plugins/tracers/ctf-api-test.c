@@ -44,16 +44,6 @@ trace {\n\
 	};\n\
 };\n\
 \n\
-env {\n\
-	domain = \"kernel\";\n\
-	sysname = \"Linux\";\n\
-	kernel_release = \"3.0.0-16-generic-pae\";\n\
-	kernel_version = \"#29-Ubuntu SMP Tue Feb 14 13:56:31 UTC 2012\";\n\
-	tracer_name = \"lttng-modules\";\n\
-	tracer_major = 2;\n\
-	tracer_minor = 0;\n\
-	tracer_patchlevel = 0;\n\
-};\n\
 \n\
 clock {\n\
 	name = monotonic;\n\
@@ -83,7 +73,6 @@ struct packet_context {\n\
 	uint64_clock_monotonic_t timestamp_begin;\n\
 	uint64_clock_monotonic_t timestamp_end;\n\
 	uint32_t events_discarded;\n\
-	uint32_t cpu_id;\n\
 };\n\
 \n\
 struct event_header_compact {\n\
@@ -241,7 +230,7 @@ void CTFDataStreamGenerate(FILE *fd, char * UUID,int UUID_size, uint64_t content
     
     //~ cpi_id = 0xDDDDDDDD;
     cpi_id = 0x0;
-    fwrite(&cpi_id,sizeof(char),sizeof(uint32_t),fd);
+    //~ fwrite(&cpi_id,sizeof(char),sizeof(uint32_t),fd);
     
     /* Content size */
     content_size = 0x000003e800000000;
