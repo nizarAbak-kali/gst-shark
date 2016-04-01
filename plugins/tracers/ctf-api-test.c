@@ -206,6 +206,22 @@ void TracerFinalize(tracer_struct * tracer)
     fclose(tracer->datastream);
 }
 
+void CTFEventHeader(tracer_struct * tracer, event_id id)
+{
+    FILE *fd;
+    fd = tracer->datastream;    
+    uint32_t timestamp;
+    
+    GstClockTime elapsed = GST_CLOCK_DIFF (tracer->tracer_start_time, gst_util_get_timestamp ());
+    
+    timestamp = elapsed;
+
+    /* Add event ID*/
+    fwrite(&id,sizeof(char),sizeof(int16_t),fd);
+    fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
+    
+    
+}
 
 /*
  * Write event packet header
@@ -299,10 +315,8 @@ void CTFNewCpuUsageEvent(tracer_struct * tracer, int16_t event_id, uint32_t time
     FILE *fd;
     
     fd = tracer->datastream;
-        //~ int size = strlen(msg);
-    /* Add event ID*/
-    fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
-    fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
+
+    CTFEventHeader(tracer, event_id);
     
     fwrite(&num,sizeof(char),sizeof(uint32_t),fd);
     
@@ -315,9 +329,7 @@ void CTFNewProcTimeEvent(tracer_struct * tracer, int16_t event_id, uint32_t time
     FILE *fd;
     
     fd = tracer->datastream;
-    fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
-
-    fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
+    CTFEventHeader(tracer, event_id);
     
     /*************************************************/
     int size = strlen(element);
@@ -346,10 +358,7 @@ void CTFNewFPSEvent(tracer_struct * tracer, int16_t event_id, uint32_t timestamp
     FILE *fd;
     
     fd = tracer->datastream;
-    fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
-
-    fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
-    
+    CTFEventHeader(tracer, event_id);
     /*************************************************/
     int size = strlen(element);
 
@@ -382,9 +391,11 @@ void CTFNewTimerInitEvent(tracer_struct * tracer, int16_t event_id, uint32_t tim
     
     fd = tracer->datastream;
     
-    fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
-
-    fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
+    CTFEventHeader(tracer, event_id);
+    
+    //~ fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
+//~ 
+    //~ fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
     
     //~ unknown = 0x000003e3;
     unknown = 0;
