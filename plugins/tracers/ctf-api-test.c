@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <string.h>
 
+#include <gst/gst.h>
+
+#include <glib/gstdio.h>
+
 #define BYTE_ORDER_LE (1)
 
 typedef enum {
@@ -358,16 +362,19 @@ void CTFNewTimerInitEvent(FILE *fd, int16_t event_id, uint32_t timestamp, int32_
 
 }
 
-int main (void)
+int main (int argc, char *argv[])
 {
     FILE* fd;
     FILE* FDMetadata;
+    
+    gst_init (&argc, &argv);
 
     /* Create metadata file */
 #if 1
     FDMetadata = fopen("metadata", "w");
 
     CTFMetadataGenerate(FDMetadata, 1, 3, UUID, BYTE_ORDER_LE);
+    
     /* Add event descriptor */
     CTFMetadataAddEvent(FDMetadata,cpuusage_metadata_event_header,CPUUSAGE_EVENT_ID);
     CTFMetadataAddEvent(FDMetadata,proctime_metadata_event_header,PROCTIME_EVENT_ID);
@@ -419,12 +426,11 @@ int main (void)
     
     
     /******************************************************************/
-#if 0
+#if 1
+    GST_ERROR ("ERROR");
     GstClockTime time;
-    
-    startTime = gst_util_get_timestamp ();
-    
-    g_printf ("%" GST_TIME_FORMAT, GST_TIME_ARGS (time));
+    time = gst_util_get_timestamp ();
+    g_printf ("%" GST_TIME_FORMAT"\n", GST_TIME_ARGS (time));
 #endif
 
     return 0;
