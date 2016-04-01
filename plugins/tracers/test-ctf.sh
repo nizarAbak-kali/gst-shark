@@ -5,7 +5,7 @@ gcc -Wall -g ctf-api-test.c -o ctf_app  -pthread -I/usr/include/gstreamer-1.0 -I
 #~ gcc -o ctf_app ctf-api-test.c
 
 echo "Create matadata and datastream"
-./ctf_app;
+GST_DEBUG=1 ./ctf_app;
 
 #~ echo "Compare ref datastream and test datastream" 
 cp datastream metadata test
