@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
-
+#include <unistd.h>
 #include <gst/gst.h>
 
 #include <glib/gstdio.h>
@@ -57,6 +57,15 @@ trace {\n\
 	};\n\
 };\n\
 \n\
+clock { \n\
+	name = monotonic; \n\
+	uuid = \"84db105b-b3f4-4821-b662-efc51455106a\"; \n\
+	description = \"Monotonic Clock\"; \n\
+	freq = 1000000; /* Frequency, in Hz */ \n\
+	/* clock value offset from Epoch is: offset * (1/freq) */ \n\
+	/*offset = 2160000000;*/\n\
+    offset_s = 21600; \n\
+};\n\
 \n\
 typealias integer {\n\
 	size = 32; align = 8; signed = false;\n\
@@ -209,18 +218,24 @@ void TracerFinalize(tracer_struct * tracer)
 void CTFEventHeader(tracer_struct * tracer, event_id id)
 {
     FILE *fd;
-    fd = tracer->datastream;    
+    fd = tracer->datastream;
+#if 1
     uint32_t timestamp;
-    
     GstClockTime elapsed = GST_CLOCK_DIFF (tracer->tracer_start_time, gst_util_get_timestamp ());
-    
+    elapsed = elapsed/1000;
     timestamp = elapsed;
-
+#if 0
+    GST_ERROR ("event");
+    g_printf ("%" GST_TIME_FORMAT" event %d\n", GST_TIME_ARGS (elapsed*1000),elapsed);
+    //~ timestamp = timestamp / 1000;
+#endif
+#else
+    static uint32_t timestamp = 0;
+    timestamp += 10;
+#endif
     /* Add event ID*/
     fwrite(&id,sizeof(char),sizeof(int16_t),fd);
     fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
-    
-    
 }
 
 /*
@@ -251,11 +266,11 @@ void CTFDataStreamGenerate(tracer_struct * tracer, char * UUID,int UUID_size, ui
      */
      
     /* Time Stamp begin */
-    time_stamp_begin = 0x3e3db41faf8; // 0xf8fa41dbe3030000
+    time_stamp_begin = 0; // 0xf8fa41dbe3030000
     //~ time_stamp_begin = 0xAAAAAAAAAAAAAAAA;
     fwrite(&time_stamp_begin,sizeof(char),sizeof(uint64_t),fd);
     /* Time Stamp end */
-    time_stamp_end = 0x000003e3ec8152ee;// 0xee5281ece3030000;
+    time_stamp_end = 0;// 0xee5281ece3030000;
     //~ time_stamp_end = 0xBBBBBBBBBBBBBBBB;
     fwrite(&time_stamp_end,sizeof(char),sizeof(uint64_t),fd);
     /* Events discarted */
@@ -407,19 +422,13 @@ void CTFNewTimerInitEvent(tracer_struct * tracer, int16_t event_id, uint32_t tim
 
 int main (int argc, char *argv[])
 {
-    //~ FILE* fd;
-    //~ FILE* FDMetadata;
     
     TracerInit(&tracer);
     
     gst_init (&argc, &argv);
 
     /* Create metadata file */
-#if 1
-    //~ FDMetadata = fopen("metadata", "w");
     
-    
-
     CTFMetadataGenerate(&tracer, 1, 3, UUID, BYTE_ORDER_LE);
     
     /* Add event descriptor */
@@ -427,41 +436,26 @@ int main (int argc, char *argv[])
     CTFMetadataAddEvent(&tracer,proctime_metadata_event_header,PROCTIME_EVENT_ID);
     CTFMetadataAddEvent(&tracer,fps_metadata_event_header,FPS_EVENT_ID);
 
-    //~ fclose(FDMetadata);
-
-#endif
-
     /* Create datastream file */
-
-    //~ fd = fopen("datastream", "w");
 
     CTFDataStreamGenerate(&tracer, UUID,sizeof(UUID),0,0);
 
     /* Add events */
     CTFNewTimerInitEvent(&tracer, 0, 0, 0);
-    
     CTFNewCpuUsageEvent(&tracer, CPUUSAGE_EVENT_ID, 10, 0, 11);
     CTFNewCpuUsageEvent(&tracer, CPUUSAGE_EVENT_ID, 20, 1, 22);
     CTFNewCpuUsageEvent(&tracer, CPUUSAGE_EVENT_ID, 30, 2, 33);
     CTFNewCpuUsageEvent(&tracer, CPUUSAGE_EVENT_ID, 40, 3, 44);
-    
-    
+    sleep(10);
     CTFNewProcTimeEvent(&tracer, PROCTIME_EVENT_ID, 50, "identity0", 1000);
+    sleep(1);
     CTFNewProcTimeEvent(&tracer, PROCTIME_EVENT_ID, 60, "queue0", 100);
+    sleep(2);
     CTFNewProcTimeEvent(&tracer, PROCTIME_EVENT_ID, 70, "identity1", 1500);
-    
+    sleep(5);
     CTFNewFPSEvent(&tracer, FPS_EVENT_ID, 100, "filesrc0", 15);
     
     TracerFinalize(&tracer);
     
-    
-    /******************************************************************/
-#if 1
-    GstClockTime time;
-    GST_ERROR ("ERROR");
-    time = gst_util_get_timestamp ();
-    g_printf ("%" GST_TIME_FORMAT"\n", GST_TIME_ARGS (time));
-#endif
-
     return 0;
 }
