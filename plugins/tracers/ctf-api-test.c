@@ -15,7 +15,7 @@ typedef struct {
     FILE * datastream;
     GstClockTime tracer_start_time;
 } tracer_struct;
-    
+
 
 typedef enum {
     TIMER_INIT_EVENT_ID,
@@ -25,7 +25,7 @@ typedef enum {
     FPS_EVENT_ID,
     PIPELINE_GRAPH_EVENT_ID,
     SCHED_TIME_EVENT_ID,
-    
+
 } event_id;
 
 tracer_struct tracer;
@@ -121,12 +121,9 @@ stream {\n\
 };\n\
 \n\
 event {\n\
-	name = timer_init;\n\
+	name = init;\n\
 	id = 0;\n\
 	stream_id = 0;\n\
-	fields := struct {\n\
-		integer { size = 32; align = 8; signed = 0; encoding = none; base = 10; } _timer;\n\
-	};\n\
 };\n\
 ";
 
@@ -205,7 +202,7 @@ void TracerInit(tracer_struct * tracer)
     tracer->metadata = fopen("metadata","w");
 
     tracer->datastream = fopen("datastream","w");
-    
+
     tracer->tracer_start_time = gst_util_get_timestamp();
 }
 
@@ -215,13 +212,13 @@ void TracerFinalize(tracer_struct * tracer)
     fclose(tracer->datastream);
 }
 
-void CTFEventHeader(tracer_struct * tracer, event_id id)
+void CTFEventHeader(event_id id)
 {
     FILE *fd;
-    fd = tracer->datastream;
+    fd = tracer.datastream;
 #if 1
     uint32_t timestamp;
-    GstClockTime elapsed = GST_CLOCK_DIFF (tracer->tracer_start_time, gst_util_get_timestamp ());
+    GstClockTime elapsed = GST_CLOCK_DIFF (tracer.tracer_start_time, gst_util_get_timestamp ());
     elapsed = elapsed/1000;
     timestamp = elapsed;
 #if 0
@@ -241,7 +238,7 @@ void CTFEventHeader(tracer_struct * tracer, event_id id)
 /*
  * Write event packet header
  */
-void CTFDataStreamGenerate(tracer_struct * tracer, char * UUID,int UUID_size, uint64_t content_size,uint64_t packet_size )
+void CTFDataStreamGenerate( )
 {
     FILE *fd;
     uint64_t time_stamp_begin;
@@ -249,22 +246,25 @@ void CTFDataStreamGenerate(tracer_struct * tracer, char * UUID,int UUID_size, ui
     uint32_t events_discarted;
     //~ uint32_t cpi_id;
     uint32_t stream_id;
-    
-    fd = tracer->datastream;
+    //~ uint64_t content_size;
+    //~ uint64_t packet_size;
+    //~
+    fd = tracer.datastream;
     /* http://diamon.org/ctf/,
      * Section 5. Event packet header
      */
      /* Magic number */
     fwrite(&Magic,sizeof(char),sizeof(Magic),fd);
     /* Trace UUID */
-    fwrite(UUID,sizeof(char),UUID_size,fd);
+    //~ fwrite(UUID,sizeof(char),UUID_size,fd);
+    fwrite(UUID,sizeof(char),sizeof(UUID),fd);
     /* Stream ID (optional) */
     stream_id = 0;
     fwrite(&stream_id,sizeof(char),sizeof(uint32_t),fd);
     /*
      * Section 5. Event packet context
      */
-     
+
     /* Time Stamp begin */
     time_stamp_begin = 0; // 0xf8fa41dbe3030000
     //~ time_stamp_begin = 0xAAAAAAAAAAAAAAAA;
@@ -277,16 +277,16 @@ void CTFDataStreamGenerate(tracer_struct * tracer, char * UUID,int UUID_size, ui
     //~ events_discarted = 0xCCCCCCCC;
     events_discarted = 0x0;
     fwrite(&events_discarted,sizeof(char),sizeof(uint32_t),fd);
-    
+
     //~ cpi_id = 0xDDDDDDDD;
     //~ cpi_id = 0x0;
     //~ fwrite(&cpi_id,sizeof(char),sizeof(uint32_t),fd);
-    
+
     /* Content size */
-    content_size = 0x000003e800000000;
+    //~ content_size = 0x000003e800000000;
     //~ fwrite(&content_size,sizeof(char),sizeof(uint64_t),fd);
     /* Packet size */
-    packet_size = 0x0004000000000000;  /* 262144 = 0x40000 */
+    //~ packet_size = 0x0004000000000000;  /* 262144 = 0x40000 */
     //~ fwrite(&packet_size,sizeof(char),sizeof(uint64_t),fd);
     /* ? ? ? ? */
     uint32_t unknown = 0x0000FFFF;
@@ -304,12 +304,12 @@ void CTFDataStreamPading(FILE *fd)
 }
 
 
-void CTFMetadataGenerate(tracer_struct * tracer, int major, int minor, char * UUID, int byte_order)
+void CTFMetadataGenerate(int major, int minor, char * UUID, int byte_order)
 {
     /* Convert UUID */
     //~ bt_uuid_unparse(UUID, UUIDstring);
-    
-    fprintf(tracer->metadata, metadata_fmt2,
+
+    fprintf(tracer.metadata, metadata_fmt2,
     major, /* major */
     minor, /* minor */
     UUIDstring,
@@ -318,34 +318,34 @@ void CTFMetadataGenerate(tracer_struct * tracer, int major, int minor, char * UU
 }
 
 
-void CTFMetadataAddEvent(tracer_struct * tracer, const char* metadata_event, event_id id)
+void CTFMetadataAddEvent(const char* metadata_event, event_id id)
 {
-    fprintf(tracer->metadata, metadata_event,
+    fprintf(tracer.metadata, metadata_event,
     id
     );
 }
 
-void CTFNewCpuUsageEvent(tracer_struct * tracer, int16_t event_id, uint32_t timestamp, int32_t num, int64_t usage)
+void CTFNewCpuUsageEvent(int16_t event_id, int32_t num, int64_t usage)
 {
     FILE *fd;
-    
-    fd = tracer->datastream;
 
-    CTFEventHeader(tracer, event_id);
-    
+    fd = tracer.datastream;
+
+    CTFEventHeader(event_id);
+
     fwrite(&num,sizeof(char),sizeof(uint32_t),fd);
-    
+
     fwrite(&usage,sizeof(char),sizeof(uint64_t),fd);
 }
 
 
-void CTFNewProcTimeEvent(tracer_struct * tracer, int16_t event_id, uint32_t timestamp, char * element, int64_t time)
+void CTFNewProcTimeEvent(int16_t event_id, char * element, int64_t time)
 {
     FILE *fd;
-    
-    fd = tracer->datastream;
-    CTFEventHeader(tracer, event_id);
-    
+
+    fd = tracer.datastream;
+    CTFEventHeader(event_id);
+
     /*************************************************/
     int size = strlen(element);
 
@@ -368,12 +368,12 @@ void CTFNewProcTimeEvent(tracer_struct * tracer, int16_t event_id, uint32_t time
     fwrite(&time,sizeof(char),sizeof(int64_t),fd);
 }
 
-void CTFNewFPSEvent(tracer_struct * tracer, int16_t event_id, uint32_t timestamp, char * element, int32_t fps)
+void CTFNewFPSEvent(int16_t event_id, char * element, int32_t fps)
 {
     FILE *fd;
-    
-    fd = tracer->datastream;
-    CTFEventHeader(tracer, event_id);
+
+    fd = tracer.datastream;
+    CTFEventHeader(event_id);
     /*************************************************/
     int size = strlen(element);
 
@@ -397,65 +397,65 @@ void CTFNewFPSEvent(tracer_struct * tracer, int16_t event_id, uint32_t timestamp
 }
 
 
-void CTFNewTimerInitEvent(tracer_struct * tracer, int16_t event_id, uint32_t timestamp, int32_t timer)
+void CTFNewTimerInitEvent(int16_t event_id, int32_t timer)
 {
     //~ int size = strlen(msg);
     /* Add event ID*/
     int32_t unknown;
     FILE * fd;
-    
-    fd = tracer->datastream;
-    
-    CTFEventHeader(tracer, event_id);
-    
+
+    fd = tracer.datastream;
+
+    CTFEventHeader(event_id);
+
     //~ fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
-//~ 
+//~
     //~ fwrite(&timestamp,sizeof(char),sizeof(uint32_t),fd);
-    
+
     //~ unknown = 0x000003e3;
     unknown = 0;
     fwrite(&unknown,sizeof(char),sizeof(uint32_t),fd);
-    
-    fwrite(&timer,sizeof(char),sizeof(uint32_t),fd);
+
+    //~ fwrite(&timer,sizeof(char),sizeof(uint32_t),fd);
 
 }
 
 int main (int argc, char *argv[])
 {
-    
+
     TracerInit(&tracer);
-    
+
     gst_init (&argc, &argv);
 
     /* Create metadata file */
-    
-    CTFMetadataGenerate(&tracer, 1, 3, UUID, BYTE_ORDER_LE);
-    
+
+    CTFMetadataGenerate(1, 3, UUID, BYTE_ORDER_LE);
+
     /* Add event descriptor */
-    CTFMetadataAddEvent(&tracer,cpuusage_metadata_event_header,CPUUSAGE_EVENT_ID);
-    CTFMetadataAddEvent(&tracer,proctime_metadata_event_header,PROCTIME_EVENT_ID);
-    CTFMetadataAddEvent(&tracer,fps_metadata_event_header,FPS_EVENT_ID);
+    CTFMetadataAddEvent(cpuusage_metadata_event_header,CPUUSAGE_EVENT_ID);
+    CTFMetadataAddEvent(proctime_metadata_event_header,PROCTIME_EVENT_ID);
+    CTFMetadataAddEvent(fps_metadata_event_header,FPS_EVENT_ID);
 
     /* Create datastream file */
 
-    CTFDataStreamGenerate(&tracer, UUID,sizeof(UUID),0,0);
+    CTFDataStreamGenerate();
 
     /* Add events */
-    CTFNewTimerInitEvent(&tracer, 0, 0, 0);
-    CTFNewCpuUsageEvent(&tracer, CPUUSAGE_EVENT_ID, 10, 0, 11);
-    CTFNewCpuUsageEvent(&tracer, CPUUSAGE_EVENT_ID, 20, 1, 22);
-    CTFNewCpuUsageEvent(&tracer, CPUUSAGE_EVENT_ID, 30, 2, 33);
-    CTFNewCpuUsageEvent(&tracer, CPUUSAGE_EVENT_ID, 40, 3, 44);
-    sleep(10);
-    CTFNewProcTimeEvent(&tracer, PROCTIME_EVENT_ID, 50, "identity0", 1000);
+    CTFNewTimerInitEvent(TIMER_INIT_EVENT_ID, 0);
+    CTFNewCpuUsageEvent(CPUUSAGE_EVENT_ID,0, 11);
+    CTFNewCpuUsageEvent(CPUUSAGE_EVENT_ID,1, 22);
+    CTFNewCpuUsageEvent(CPUUSAGE_EVENT_ID,2, 33);
+    CTFNewCpuUsageEvent(CPUUSAGE_EVENT_ID,3, 44);
     sleep(1);
-    CTFNewProcTimeEvent(&tracer, PROCTIME_EVENT_ID, 60, "queue0", 100);
+    CTFNewProcTimeEvent(PROCTIME_EVENT_ID,"identity0", 1000);
+    sleep(1);
+    CTFNewProcTimeEvent(PROCTIME_EVENT_ID,"queue0", 100);
     sleep(2);
-    CTFNewProcTimeEvent(&tracer, PROCTIME_EVENT_ID, 70, "identity1", 1500);
+    CTFNewProcTimeEvent(PROCTIME_EVENT_ID,"identity1", 1500);
     sleep(5);
-    CTFNewFPSEvent(&tracer, FPS_EVENT_ID, 100, "filesrc0", 15);
-    
+    CTFNewFPSEvent(FPS_EVENT_ID, "filesrc0", 15);
+
     TracerFinalize(&tracer);
-    
+
     return 0;
 }
