@@ -14,6 +14,7 @@ typedef struct {
     FILE * metadata;
     FILE * datastream;
     GstClockTime tracer_start_time;
+    GMutex mutex;
 } tracer_struct;
 
 
@@ -330,12 +331,16 @@ void CTFNewCpuUsageEvent(int16_t event_id, int32_t num, int64_t usage)
     FILE *fd;
 
     fd = tracer.datastream;
+    
+    g_mutex_lock (&tracer.mutex);
 
     CTFEventHeader(event_id);
 
     fwrite(&num,sizeof(char),sizeof(uint32_t),fd);
 
     fwrite(&usage,sizeof(char),sizeof(uint64_t),fd);
+    
+    g_mutex_unlock (&tracer.mutex);
 }
 
 
@@ -344,9 +349,11 @@ void CTFNewProcTimeEvent(int16_t event_id, char * element, int64_t time)
     FILE *fd;
 
     fd = tracer.datastream;
+    
+    g_mutex_lock (&tracer.mutex);
+    
     CTFEventHeader(event_id);
 
-    /*************************************************/
     int size = strlen(element);
 
     fwrite(element,sizeof(char),size+1,fd);
@@ -363,9 +370,10 @@ void CTFNewProcTimeEvent(int16_t event_id, char * element, int64_t time)
             fwrite(&zero,sizeof(char),1,fd);
         }
     }
-    /*************************************************/
 
     fwrite(&time,sizeof(char),sizeof(int64_t),fd);
+    
+    g_mutex_unlock (&tracer.mutex);
 }
 
 void CTFNewFPSEvent(int16_t event_id, char * element, int32_t fps)
@@ -373,6 +381,9 @@ void CTFNewFPSEvent(int16_t event_id, char * element, int32_t fps)
     FILE *fd;
 
     fd = tracer.datastream;
+    
+    g_mutex_lock (&tracer.mutex);
+    
     CTFEventHeader(event_id);
     /*************************************************/
     int size = strlen(element);
@@ -394,6 +405,8 @@ void CTFNewFPSEvent(int16_t event_id, char * element, int32_t fps)
     /*************************************************/
 
     fwrite(&fps,sizeof(char),sizeof(int32_t),fd);
+    
+    g_mutex_unlock (&tracer.mutex);
 }
 
 
@@ -406,6 +419,8 @@ void CTFNewTimerInitEvent(int16_t event_id, int32_t timer)
 
     fd = tracer.datastream;
 
+    g_mutex_lock (&tracer.mutex);
+    
     CTFEventHeader(event_id);
 
     //~ fwrite(&event_id,sizeof(char),sizeof(int16_t),fd);
@@ -415,6 +430,7 @@ void CTFNewTimerInitEvent(int16_t event_id, int32_t timer)
     //~ unknown = 0x000003e3;
     unknown = 0;
     fwrite(&unknown,sizeof(char),sizeof(uint32_t),fd);
+    g_mutex_unlock (&tracer.mutex);
 
     //~ fwrite(&timer,sizeof(char),sizeof(uint32_t),fd);
 
