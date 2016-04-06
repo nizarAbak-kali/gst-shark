@@ -58,7 +58,7 @@ static const char cpuusage_metadata_event[] = "event {\n\
 	id = %d;\n\
 	stream_id = %d;\n\
 	fields := struct {\n\
-		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _cpunum;\n\
+		integer { size = 32; align = 8; signed = 0; encoding = none; base = 10; } _cpunum;\n\
 		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _cpuload;\n\
 	};\n\
 };\n\

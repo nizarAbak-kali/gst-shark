@@ -234,6 +234,7 @@ create_new_ctf (void)
   ctf->datastream = g_fopen ("metadata", "a");
   ctf->metadata = g_fopen ("datastream", "a");
   g_mutex_init (ctf->mutex);
+  ctf->start_time = gst_util_get_timestamp ();
 
   //g_free (dir_name);
   //~ g_free (datastream_file);
