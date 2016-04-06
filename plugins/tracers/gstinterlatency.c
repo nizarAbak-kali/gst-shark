@@ -112,6 +112,7 @@ log_latency (const GstStructure * data, GstPad * sink_pad, guint64 sink_ts)
   GstPad *src_pad;
   guint64 src_ts;
   gchar *src, *sink;
+  guint64 time;
 
   gst_structure_id_get (data,
       latency_probe_pad, GST_TYPE_PAD, &src_pad,
@@ -120,11 +121,14 @@ log_latency (const GstStructure * data, GstPad * sink_pad, guint64 sink_ts)
   src = g_strdup_printf ("%s_%s", GST_DEBUG_PAD_NAME (src_pad));
   sink = g_strdup_printf ("%s_%s", GST_DEBUG_PAD_NAME (sink_pad));
 
+  time = GST_CLOCK_DIFF (src_ts, sink_ts);
+
   /* TODO(ensonic): report format is still unstable */
   gst_tracer_log_trace (gst_structure_new ("latency",
           "src", G_TYPE_STRING, src,
-          "element", G_TYPE_STRING, sink,
-          "time", G_TYPE_UINT64, GST_CLOCK_DIFF (src_ts, sink_ts), NULL));
+          "element", G_TYPE_STRING, sink, "time", G_TYPE_UINT64, time, NULL));
+  do_print_interlatency_event (INTERLATENCY_EVENT_ID, src, sink, time);
+
   g_free (src);
   g_free (sink);
 }

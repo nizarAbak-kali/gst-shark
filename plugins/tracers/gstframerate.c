@@ -97,6 +97,8 @@ do_print_framerate (gpointer * data)
     gst_tracer_log_trace (gst_structure_new ("framerate",
             "source-pad", G_TYPE_STRING, padtable->fullname,
             "fps", G_TYPE_INT, padtable->counter, NULL));
+    do_print_framerate_event (FPS_EVENT_ID, padtable->fullname,
+        padtable->counter);
     padtable->counter = 0;
     if (!self->start_timer) {
       return FALSE;

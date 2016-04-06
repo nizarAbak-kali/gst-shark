@@ -99,6 +99,7 @@ do_pull_range_pre (GstTracer * self, guint64 ts, GstPad * pad)
   GHashTable *schedulepads;
   GstSchedulePad *schedulepad;
   GstElement *element;
+  guint64 time;
 
   scheduletimeTracer = GST_SCHEDULETIME_TRACER_CAST (self);
   element = gst_pad_get_parent_element (pad);
@@ -107,10 +108,13 @@ do_pull_range_pre (GstTracer * self, guint64 ts, GstPad * pad)
       (GstSchedulePad *) g_hash_table_lookup (schedulepads,
       g_strdup_printf ("%s_%s", GST_DEBUG_PAD_NAME (pad)));
 
-  if (schedulepad->previous_time != 0)
+  if (schedulepad->previous_time != 0) {
+    time = GST_CLOCK_DIFF (schedulepad->previous_time, ts);
     gst_tracer_log_trace (gst_structure_new (GST_ELEMENT_NAME (element),
-            "scheduling-time", G_TYPE_UINT64,
-            GST_CLOCK_DIFF (schedulepad->previous_time, ts), NULL));
+            "scheduling-time", G_TYPE_UINT64, time, NULL));
+    do_print_scheduling_event (SCHED_TIME_EVENT_ID, GST_ELEMENT_NAME (element),
+        time);
+  }
 
   schedulepad->previous_time = ts;
 }

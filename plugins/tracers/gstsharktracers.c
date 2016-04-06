@@ -57,6 +57,9 @@ plugin_init (GstPlugin * plugin)
           gst_framerate_tracer_get_type ())) {
     return FALSE;
   }
+
+  gst_ctf_init ();
+
   return TRUE;
 }
 
