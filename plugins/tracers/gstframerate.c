@@ -59,7 +59,7 @@ struct _GstFramerateHash
 };
 
 static const char framerate_metadata_event[] = "event {\n\
-	name = cpuusage;\n\
+	name = framerate;\n\
 	id = %d;\n\
 	stream_id = %d;\n\
 	fields := struct {\n\
