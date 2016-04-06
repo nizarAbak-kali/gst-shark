@@ -232,8 +232,8 @@ create_new_ctf (void)
      contains the file descriptors for the CTF ouput. */
   ctf = g_malloc (sizeof (GstCtfDescriptor));
 
-  ctf->datastream = g_fopen ("metadata", "a");
-  ctf->metadata = g_fopen ("datastream", "a");
+  ctf->datastream = g_fopen ("datastream", "a");
+  ctf->metadata = g_fopen ("metadata", "a");
   g_mutex_init (ctf->mutex);
   ctf->start_time = gst_util_get_timestamp ();
 
