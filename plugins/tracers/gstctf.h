@@ -39,15 +39,12 @@ void gst_ctf_close ();
 void add_metadata_event_struct (const gchar *metadata_event, gint id,
     gint stream_id);
 void do_print_cpuusage_event (gint16 event_id, guint32 cpunum, guint64 cpuload);
-void do_print_proctime_event (gint16 event_id, guint32 timestamp,
-    gchar *elementname, uint64_t time);
-void do_print_framerate_event (gint16 event_id, guint32 timestamp,
-    gchar *padname, guint64 fps);
+void do_print_proctime_event (gint16 event_id, gchar *elementname, uint64_t time);
+void do_print_framerate_event (gint16 event_id, gchar *padname, guint64 fps);
 void do_print_interlatency_event (gint16 event_id,
-    guint32 timestamp, char *originpad, gchar *destinationpad, guint64 time);
-void do_print_scheduling_event (gint16 event_id, guint32 timestamp,
+    char *originpad, gchar *destinationpad, guint64 time);
+void do_print_scheduling_event (gint16 event_id,
     gchar *elementname, guint64 time);
-void do_print_init_timer (gint16 event_id, guint32 timestamp,
-    guint32 timer);
+void do_print_init_timer (gint16 event_id);
 G_END_DECLS
 #endif /*__GST_CTF_H__*/
