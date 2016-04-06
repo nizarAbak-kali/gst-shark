@@ -178,6 +178,7 @@ static void
 gst_scheduletime_tracer_init (GstScheduletimeTracer * self)
 {
   GstTracer *tracer = GST_TRACER (self);
+  gchar *metadata_event;
 
   self->schedulepads =
       g_hash_table_new_full (g_str_hash, g_str_equal, schedule_pad_destroy,
@@ -199,4 +200,8 @@ gst_scheduletime_tracer_init (GstScheduletimeTracer * self)
           GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE,
               G_TYPE_INT64, "description", G_TYPE_STRING,
               "Scheduling time (Nanoseconds)", NULL), NULL));
+
+  metadata_event = g_strdup_printf (scheduling_metadata_event, 1, 0);
+  add_metadata_event_struct (metadata_event);
+  g_free (metadata_event);
 }

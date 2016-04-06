@@ -221,6 +221,7 @@ static void
 gst_framerate_tracer_init (GstFramerateTracer * self)
 {
   GstTracer *tracer = GST_TRACER (self);
+  gchar *metadata_event;
 
   self->frame_counters =
       g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL,
@@ -243,4 +244,8 @@ gst_framerate_tracer_init (GstFramerateTracer * self)
               "flags", G_TYPE_STRING, "aggregated",
               "min", G_TYPE_INT, G_GUINT64_CONSTANT (0),
               "max", G_TYPE_INT, G_GUINT64_CONSTANT (5000), NULL), NULL));
+
+  metadata_event = g_strdup_printf (framerate_metadata_event, 1, 0);
+  add_metadata_event_struct (metadata_event);
+  g_free (metadata_event);
 }

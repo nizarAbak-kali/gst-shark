@@ -145,6 +145,7 @@ static void
 gst_proctime_tracer_init (GstProcTimeTracer * self)
 {
   GstTracer *tracer = GST_TRACER (self);
+  gchar *metadata_event;
 
   self->timeString = g_string_new ("0:00:00.000000000 ");
 
@@ -158,4 +159,8 @@ gst_proctime_tracer_init (GstProcTimeTracer * self)
           GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE,
               G_TYPE_INT64, "description", G_TYPE_STRING,
               "Processing time (Microseconds)", NULL), NULL));
+
+  metadata_event = g_strdup_printf (proctime_metadata_event, 1, 0);
+  add_metadata_event_struct (metadata_event);
+  g_free (metadata_event);
 }

@@ -258,6 +258,8 @@ static void
 gst_interlatency_tracer_init (GstInterLatencyTracer * self)
 {
   GstTracer *tracer = GST_TRACER (self);
+  gchar *metadata_event;
+
   gst_tracing_register_hook (tracer, "pad-push-pre",
       G_CALLBACK (do_push_buffer_pre));
   gst_tracing_register_hook (tracer, "pad-push-list-pre",
@@ -272,4 +274,8 @@ gst_interlatency_tracer_init (GstInterLatencyTracer * self)
       G_CALLBACK (do_pull_range_post));
   gst_tracing_register_hook (tracer, "pad-push-event-pre",
       G_CALLBACK (do_push_event_pre));
+
+  metadata_event = g_strdup_printf (interlatency_metadata_event, 1, 0);
+  add_metadata_event_struct (metadata_event);
+  g_free (metadata_event);
 }
