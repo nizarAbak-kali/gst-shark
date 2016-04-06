@@ -26,7 +26,7 @@ G_BEGIN_DECLS typedef struct _GstCtfDescriptor GstCtfDescriptor;
 
 typedef enum
 {
-  TIMER_INIT_EVENT_ID,
+  INIT_EVENT_ID,
   CPUUSAGE_EVENT_ID,
   PROCTIME_EVENT_ID,
   INTERLATENCY_EVENT_ID,
@@ -43,6 +43,6 @@ void do_print_framerate_event (event_id id, const gchar * padname, guint64 fps);
 void do_print_interlatency_event (event_id id,
     char *originpad, gchar * destinationpad, guint64 time);
 void do_print_scheduling_event (event_id id, gchar * elementname, guint64 time);
-void do_print_init_timer (event_id id);
+void do_print_ctf_init (event_id id);
 G_END_DECLS
 #endif /*__GST_CTF_H__*/

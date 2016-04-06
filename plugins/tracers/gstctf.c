@@ -134,6 +134,7 @@ event {\n\
 	stream_id = 0;\n\
 };\n\
 ";
+
 static void
 generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
 {
@@ -262,6 +263,7 @@ gst_ctf_init (void)
   ctf_descriptor = create_new_ctf ();
   generate_datastream_header (UUID, sizeof (UUID), 0);
   generate_metadata (1, 3, UUIDstring, BYTE_ORDER_LE);
+  do_print_ctf_init (INIT_EVENT_ID);
 
   //g_free (UUIDstring);
 
@@ -425,7 +427,7 @@ do_print_scheduling_event (event_id id, gchar * elementname, guint64 time)
 }
 
 void
-do_print_init_timer (event_id id)
+do_print_ctf_init (event_id id)
 {
   guint32 unknown = 0;
 
