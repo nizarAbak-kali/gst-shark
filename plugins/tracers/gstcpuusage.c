@@ -123,6 +123,7 @@ cpuusage_thread_func (gpointer data)
 static void
 gst_cpuusage_tracer_init (GstCPUUsageTracer * self)
 {
+  gchar *metadata_event;
   GstTracer *tracer = GST_TRACER (self);
 
   gst_cpu_usage_init (&(self->cpuusage));
@@ -136,4 +137,9 @@ gst_cpuusage_tracer_init (GstCPUUsageTracer * self)
               "min", G_TYPE_UINT, G_GINT64_CONSTANT (0), "max", G_TYPE_UINT, CPU_NUM_MAX, NULL), "load", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_DOUBLE, "description", G_TYPE_STRING, "Core load percentage", "flags", G_TYPE_STRING, "aggregated",       /* TODO: use gflags */
               "min", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (0),
               "max", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (100), NULL), NULL));
+
+
+  metadata_event = g_strdup_printf (cpuusage_metadata_event, 1, 0);
+  add_metadata_event_struct (metadata_event);
+  g_free (metadata_event);
 }
