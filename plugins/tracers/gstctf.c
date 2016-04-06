@@ -276,7 +276,8 @@ generate_metadata (int major, int minor, gchar * UUID, int byte_order)
 }
 
 void
-add_metadata_event_struct (const char *metadata_event, event_id id, gint stream_id)
+add_metadata_event_struct (const char *metadata_event, event_id id,
+    gint stream_id)
 {
   /* This function only writes the event structure to the metadata file, it
      depends entirely of what is passed as an argument. */

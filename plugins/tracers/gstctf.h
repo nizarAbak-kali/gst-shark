@@ -22,29 +22,28 @@
 #define __GST_CTF_H__
 
 #include <gst/gst.h>
-G_BEGIN_DECLS
-   typedef struct _GstCtfDescriptor GstCtfDescriptor;
+G_BEGIN_DECLS typedef struct _GstCtfDescriptor GstCtfDescriptor;
 
-typedef enum {
-    TIMER_INIT_EVENT_ID,
-    CPUUSAGE_EVENT_ID,
-    PROCTIME_EVENT_ID,
-    INTERLATENCY_EVENT_ID,
-    FPS_EVENT_ID,
-    SCHED_TIME_EVENT_ID,
+typedef enum
+{
+  TIMER_INIT_EVENT_ID,
+  CPUUSAGE_EVENT_ID,
+  PROCTIME_EVENT_ID,
+  INTERLATENCY_EVENT_ID,
+  FPS_EVENT_ID,
+  SCHED_TIME_EVENT_ID,
 } event_id;
 
 void gst_vtf_init ();
-void gst_ctf_close (); 
-void add_metadata_event_struct (const gchar *metadata_event, event_id id,
+void gst_ctf_close ();
+void add_metadata_event_struct (const gchar * metadata_event, event_id id,
     gint stream_id);
 void do_print_cpuusage_event (event_id id, guint32 cpunum, guint64 cpuload);
-void do_print_proctime_event (event_id id, gchar *elementname, guint64 time);
-void do_print_framerate_event (event_id id, gchar *padname, guint64 fps);
+void do_print_proctime_event (event_id id, gchar * elementname, guint64 time);
+void do_print_framerate_event (event_id id, gchar * padname, guint64 fps);
 void do_print_interlatency_event (event_id id,
-    char *originpad, gchar *destinationpad, guint64 time);
-void do_print_scheduling_event (event_id id,
-    gchar *elementname, guint64 time);
+    char *originpad, gchar * destinationpad, guint64 time);
+void do_print_scheduling_event (event_id id, gchar * elementname, guint64 time);
 void do_print_init_timer (event_id id);
 G_END_DECLS
 #endif /*__GST_CTF_H__*/
