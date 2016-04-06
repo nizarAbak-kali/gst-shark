@@ -285,16 +285,27 @@ add_metadata_event_struct (const char *metadata_event, gint id, gint stream_id)
   g_fprintf (ctf_descriptor->metadata, metadata_event, id, stream_id);
   g_mutex_unlock (ctf_descriptor->mutex);
 }
+#endif
+
+static void
+add_event_header (event_id id)
+{
+  uint32_t timestamp;
+  GstClockTime elapsed =
+      GST_CLOCK_DIFF (ctf_descriptor->start_time, gst_util_get_timestamp ());
+  elapsed = elapsed / 1000;
+  timestamp = elapsed;
+  /* Add event ID */
+  fwrite (&id, sizeof (char), sizeof (int16_t), ctf_descriptor->datastream);
+  fwrite (&timestamp, sizeof (char), sizeof (uint32_t),
+      ctf_descriptor->datastream);
+}
 
 void
-do_print_cpuusage_event (gint16 event_id, guint32 timestamp,
-    guint32 cpunum, guint64 cpuload)
+do_print_cpuusage_event (gint16 event_id, guint32 cpunum, guint64 cpuload)
 {
   g_mutex_lock (ctf_descriptor->mutex);
-  fwrite (&event_id, sizeof (gchar), sizeof (gint16),
-      ctf_descriptor->datastream);
-  fwrite (&timestamp, sizeof (gchar), sizeof (guint32),
-      ctf_descriptor->datastream);
+  add_event_header (event_id);
   fwrite (&cpunum, sizeof (gchar), sizeof (guint32),
       ctf_descriptor->datastream);
   fwrite (&cpuload, sizeof (gchar), sizeof (guint64),
@@ -302,6 +313,7 @@ do_print_cpuusage_event (gint16 event_id, guint32 timestamp,
   g_mutex_unlock (ctf_descriptor->mutex);
 }
 
+#if 0
 void
 do_print_proctime_event (gint16 event_id, guint32 timestamp,
     gchar * elementname, guint64 time)
