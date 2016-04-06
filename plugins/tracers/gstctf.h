@@ -23,23 +23,32 @@
 
 #include <gst/gst.h>
 G_BEGIN_DECLS
-    void generate_data_stream_header (FILE * fd, char *UUID, int UUID_size,
-    uint32_t stream_id);
-void generate_metadata (FILE * fd, int major, int minor, char *UUID,
-    int byte_order);
-void add_metadata_event_struct (FILE * fd, const char *metadata_event, int id,
-    int stream_id);
-void do_print_cpuusage_event (FILE * fd, int16_t event_id, uint32_t timestamp,
-    uint32_t cpunum, uint64_t cpuload);
-void do_print_proctime_event (FILE * fd, int16_t event_id, uint32_t timestamp,
-    char *elementname, uint64_t time);
-void do_print_framerate_event (FILE * fd, int16_t event_id, uint32_t timestamp,
-    char *padname, uint64_t fps);
-void do_print_interlatency_event (FILE * fd, int16_t event_id,
-    uint32_t timestamp, char *originpad, char *destinationpad, uint64_t time);
-void do_print_scheduling_event (FILE * fd, int16_t event_id, uint32_t timestamp,
-    char *elementname, uint64_t time);
-void do_print_init_timer (FILE * fd, int16_t event_id, uint32_t timestamp,
-    uint32_t timer);
+   typedef struct _GstCtfDescriptor GstCtfDescriptor;
+
+typedef enum {
+    TIMER_INIT_EVENT_ID,
+    CPUUSAGE_EVENT_ID,
+    PROCTIME_EVENT_ID,
+    INTERLATENCY_EVENT_ID,
+    FPS_EVENT_ID,
+    SCHED_TIME_EVENT_ID,
+} event_id;
+
+void gst_vtf_init ();
+void gst_ctf_close (); 
+void add_metadata_event_struct (const gchar *metadata_event, gint id,
+    gint stream_id);
+void do_print_cpuusage_event (gint16 event_id, guint32 timestamp,
+    guint32 cpunum, guint64 cpuload);
+void do_print_proctime_event (gint16 event_id, guint32 timestamp,
+    gchar *elementname, uint64_t time);
+void do_print_framerate_event (gint16 event_id, guint32 timestamp,
+    gchar *padname, guint64 fps);
+void do_print_interlatency_event (gint16 event_id,
+    guint32 timestamp, char *originpad, gchar *destinationpad, guint64 time);
+void do_print_scheduling_event (gint16 event_id, guint32 timestamp,
+    gchar *elementname, guint64 time);
+void do_print_init_timer (gint16 event_id, guint32 timestamp,
+    guint32 timer);
 G_END_DECLS
 #endif /*__GST_CTF_H__*/

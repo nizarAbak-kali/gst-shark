@@ -42,6 +42,7 @@
 #endif
 
 #include "gstinterlatency.h"
+#include "gstctf.h"
 
 GST_DEBUG_CATEGORY_STATIC (gst_interlatency_debug);
 #define GST_CAT_DEFAULT gst_interlatency_debug
@@ -55,6 +56,18 @@ G_DEFINE_TYPE_WITH_CODE (GstInterLatencyTracer, gst_interlatency_tracer,
 static GQuark latency_probe_id;
 static GQuark latency_probe_pad;
 static GQuark latency_probe_ts;
+
+static const char interlatency_metadata_event[] = "event {\n\
+	name = interlatency;\n\
+	id = %d;\n\
+	stream_id = %d;\n\
+	fields := struct {\n\
+		string _originpad;\n\
+		string _destinationpad;\n\
+		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _time;\n\
+	};\n\
+};\n\
+\n";
 
 /* data helpers */
 

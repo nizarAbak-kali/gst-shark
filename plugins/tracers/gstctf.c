@@ -24,8 +24,27 @@
 #endif
 
 #include <gst/gst.h>
+#include <glib.h>
+#include <glib/gstdio.h>
+#include <glib/gstdint.h>
+#include <glib/gprintf.h>
 
 #include "gstctf.h"
+
+typedef enum {
+  BYTE_ORDER_BE,
+  BYTE_ORDER_LE,
+} byte_order;
+
+struct _GstCtfDescriptor
+{
+  FILE * metadata;
+  FILE * datastream;
+  GMutex *mutex;
+  GstClockTime start_time;
+};
+
+static GstCtfDescriptor *ctf_descriptor = NULL;
 
 /* Metadata format string */
 static const char metadata_fmt[] = "/* CTF 1.8 */\n\
@@ -83,255 +102,279 @@ stream {\n\
 };\n\
 \n";
 
-static const char cpuusage_metadata_event[] = "event {\n\
-	name = cpuusage;\n\
-	id = %d;\n\
-	stream_id = %d;\n\
-	fields := struct {\n\
-		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _cpunum;\n\
-		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _cpuload;\n\
-	};\n\
-};\n\
-\n";
+gboolean gst_ctf_init () {
+  gchar UUID[] = {0xd1,0x8e,0x63,0x74,0x35,0xa1,0xcd,0x42,0x8e,0x70,0xa9,0xcf,0xfa,0x71,0x27,0x93};
+  gchar * UUIDstring;
 
-static const char proctime_metadata_event[] = "event {\n\
-	name = proctime;\n\
-	id = %d;\n\
-	stream_id = %d;\n\
-	fields := struct {\n\
-		string _elementname;\n\
-		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _time;\n\
-	};\n\
-};\n\
-\n";
+  g_sprintf (UUIDstring, "d18e6374-35a1-cd42-8e70-a9cffa712793");
 
-static const char framerate_metadata_event[] = "event {\n\
-	name = cpuusage;\n\
-	id = %d;\n\
-	stream_id = %d;\n\
-	fields := struct {\n\
-		string _padname;\n\
-		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _fps;\n\
-	};\n\
-};\n\
-\n";
+  if (tracer_ctf) {
+    GST_ERROR ("@SFC: Error! Structure already exits!");
+    return FALSE;
+  }
 
-static const char interlatency_metadata_event[] = "event {\n\
-	name = interlatency;\n\
-	id = %d;\n\
-	stream_id = %d;\n\
-	fields := struct {\n\
-		string _originpad;\n\
-		string _destinationpad;\n\
-		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _time;\n\
-	};\n\
-};\n\
-\n";
+  ctf_descriptor = create_new_ctf();
+  generate_datastream_header(UUID, sizeof (UUID), 0);
+  generate_metadata(1, 3, UUIDstring, BYTE_ORDER_LE);
 
-static const char scheduling_metadata_event[] = "event {\n\
-	name = scheduling;\n\
-	id = %d;\n\
-	stream_id = %d;\n\
-	fields := struct {\n\
-		string _elementname;\n\
-		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _time;\n\
-	};\n\
-};\n\
-\n";
+  g_free (UUIDstring);
 
-void
-generate_data_stream_header (FILE * fd, char *UUID, int UUID_size,
-    uint32_t stream_id)
+  return TRUE;
+}
+
+void gst_ctf_close () {
+  fclose (ctf_descriptor->metadata);
+  fclose (ctf_descriptor->datastream);
+  g_mutex_clear (ctf_descriptor->mutex);
+  g_free (ctf_descriptor);
+}
+
+static GstCtfDescriptor create_new_ctf () {
+  GstCtfDescriptor ctf;
+  gchar *dir_name;
+  gchar *metadata_file;
+  gchar *datastream_file;
+  time_t now = time (NULL);
+
+  g_sprintf (metadata_file, "metadata");
+  g_sprintf (datastream_file, "datastream");
+
+  /* Creating the output folder for the CTF output files. */
+
+  g_date_strftime (dir_name, 30, "gstshark_ctf_%Y%m%d%H%M%S", localtime(&now));
+
+  if (!g_file_test (dir_name, G_FILE_TEST_EXISTS)) {
+    GST_ERROR ("@SFC: Creating %s directory.", dir_name);
+    g_mkdir(dir_name, 0666);
+  } else {
+    GST_ERROR ("@SFC: Directory %s already exists.", dir_name);
+  }
+
+  /* Allocating memory space for the private structure that will 
+     contains the file descriptors for the CTF ouput. */
+  ctf = malloc (sizeof (GstCtfDescriptor));
+
+  ctf->datastream = g_fopen (datastream_file, "a");
+  ctf->metadata = g_fopen (metadata_file, "a");
+  g_mutex_init (ctf->mutex);
+
+  g_free (dir_name);
+  g_free (datastream_file);
+  g_free (metadata_file);
+
+  return ctf;
+}
+
+static void
+generate_datastream_header (gchar *UUID, gint UUID_size,
+    guint32 stream_id)
 {
-  uint64_t time_stamp_begin;
-  uint64_t time_stamp_end;
-  uint32_t events_discarted;
-  uint32_t cpu_id;
+  guint64 time_stamp_begin;
+  guint64 time_stamp_end;
+  guint32 events_discarted;
+  guint32 cpu_id;
+  gint Magic = 0xC1FC1FC1;
 
   /* The begin of the data stream header is compound by the Magic Number,
      the trace UUID and the Stream ID. These are all required fields. */
 
+  g_mutex_lock(ctf_descriptor->mutex);
   /* Magic Number */
-  fwrite (&Magic, sizeof (char), sizeof (Magic), fd);
+  fwrite (&Magic, sizeof (gchar), sizeof (gint), ctf_descriptor->datastream);
 
   /* Trace UUID */
-  fwrite (UUID, sizeof (char), UUID_size, fd);
+  fwrite (UUID, sizeof (gchar), UUID_size, ctf_descriptor->datastream);
 
   /* Stream ID */
-  fwrite (&stream_id, sizeof (char), sizeof (uint32_t), fd);
+  fwrite (&stream_id, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
 
   /* The following bytes correspond to the event packet context, these 
      fields are optional. */
 
   /* Time Stamp begin */
   time_stamp_begin = 0x3e3db41faf8;     // 0xf8fa41dbe3030000
-  fwrite (&time_stamp_begin, sizeof (char), sizeof (uint64_t), fd);
+  fwrite (&time_stamp_begin, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
 
   /* Time Stamp end */
   time_stamp_end = 0x000003e3ec8152ee;  // 0xee5281ece3030000;
-  fwrite (&time_stamp_end, sizeof (char), sizeof (uint64_t), fd);
+  fwrite (&time_stamp_end, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
 
   /* Events discarted */
   events_discarted = 0x0;
-  fwrite (&events_discarted, sizeof (char), sizeof (uint32_t), fd);
+  fwrite (&events_discarted, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
 
   /* CPU ID */
   cpu_id = 0x0;
-  fwrite (&cpu_id, sizeof (char), sizeof (uint32_t), fd);
+  fwrite (&cpu_id, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
 
   /* Padding needed */
-  uint32_t unknown = 0x0000FFFF;
-  fwrite (&unknown, sizeof (char), sizeof (uint32_t), fd);
+  guint32 unknown = 0x0000FFFF;
+  fwrite (&unknown, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+
+  g_mutex_unlock(ctf_descriptor->mutex);
 }
 
-void
-generate_metadata (FILE * fd, int major, int minor, char *UUID, int byte_order)
+static void
+generate_metadata (int major, int minor, gchar *UUID, int byte_order)
 {
   /* Writing the first sections of the metadata file with the structures 
      and the definitions that will be needed in the future. */
 
-  fprintf (fd, metadata_fmt, major,     /* major */
-      minor,                    /* minor */
-      UUIDstring, byte_order ? "le" : "be");
+  g_mutex_lock(ctf_descriptor->mutex);
+  g_fprintf (ctf_descriptor->metadata, metadata_fmt, major, minor, UUID, byte_order ? "le" : "be");
+  g_mutex_unlock(ctf_descriptor->mutex);
 }
 
 void
-add_metadata_event_struct (FILE * fd, const char *metadata_event, int id,
-    int stream_id)
+add_metadata_event_struct (const char *metadata_event, gint id,
+    gint stream_id)
 {
   /* This function only writes the event structure to the metadata file, it
      depends entirely of what is passed as an argument. */
-
-  fprint (fd, metadata_event, event_id, stream_id);
+  g_mutex_lock(ctf_descriptor->mutex);
+  g_fprintf (ctf_descriptor->metadata, metadata_event, id, stream_id);
+  g_mutex_unlock(ctf_descriptor->mutex);
 }
 
 void
-do_print_cpuusage_event (FILE * fd, int16_t event_id, uint32_t timestamp,
-    uint32_t cpunum, uint64_t cpuload)
+do_print_cpuusage_event (gint16 event_id, guint32 timestamp,
+    guint32 cpunum, guint64 cpuload)
 {
-  fwrite (&event_id, sizeof (char), sizeof (int16_t), fd);
-  fwrite (&timestamp, sizeof (char), sizeof (uint32_t), fd);
-  fwrite (&cpunum, sizeof (char), sizeof (uint32_t), fd);
-  fwrite (&cpuload, sizeof (char), sizeof (uint64_t), fd);
+  g_mutex_lock(ctf_descriptor->mutex);
+  fwrite (&event_id, sizeof (gchar), sizeof (gint16), ctf_descriptor->datastream);
+  fwrite (&timestamp, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+  fwrite (&cpunum, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+  fwrite (&cpuload, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
+  g_mutex_unlock(ctf_descriptor->mutex);
 }
 
 void
-do_print_proctime_event (FILE * fd, int16_t event_id, uint32_t timestamp,
-    char *elementname, uint64_t time)
+do_print_proctime_event (gint16 event_id, guint32 timestamp,
+    gchar *elementname, guint64 time)
 {
-  int size = strlen (elementname);
-  int pad_num = (size + 1) % 16;
-  char zero = 0;
+  gint size = strlen (elementname);
+  gint pad_num = (size + 1) % 16;
+  gchar zero = 0;
 
-  fwrite (&event_id, sizeof (char), sizeof (int16_t), fd);
-  fwrite (&timestamp, sizeof (char), sizeof (uint32_t), fd);
-  fwrite (elementname, sizeof (char), size + 1, fd);
+  g_mutex_lock(ctf_descriptor->mutex);
+  fwrite (&event_id, sizeof (gchar), sizeof (gint16), ctf_descriptor->datastream);
+  fwrite (&timestamp, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+  fwrite (elementname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
   /* Verify if padding must be added */
   if (pad_num != 0) {
     pad_num = 16 - pad_num;
 
     for (; pad_num > 0; --pad_num) {
-      fwrite (&zero, sizeof (char), 1, fd);
+      fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
     }
   }
 
-  fwrite (&time, sizeof (char), sizeof (uint64_t), fd);
+  fwrite (&time, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
+  g_mutex_unlock(ctf_descriptor->mutex);
 }
 
 void
-do_print_framerate_event (FILE * fd, int16_t event_id, uint32_t timestamp,
-    char *padname, uint64_t fps)
+do_print_framerate_event (gint16 event_id, guint32 timestamp,
+    gchar *padname, guint64 fps)
 {
-  int size = strlen (padname);
-  int pad_num = (size + 1) % 16;
-  char zero = 0;
+  gint size = strlen (padname);
+  gint pad_num = (size + 1) % 16;
+  gchar zero = 0;
 
-  fwrite (&event_id, sizeof (char), sizeof (int16_t), fd);
-  fwrite (&timestamp, sizeof (char), sizeof (uint32_t), fd);
-  fwrite (padname, sizeof (char), size + 1, fd);
+  g_mutex_lock(ctf_descriptor->mutex);
+  fwrite (&event_id, sizeof (gchar), sizeof (gint16), ctf_descriptor->datastream);
+  fwrite (&timestamp, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+  fwrite (padname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
   /* Verify if padding must be added */
   if (pad_num != 0) {
     pad_num = 16 - pad_num;
 
     for (; pad_num > 0; --pad_num) {
-      fwrite (&zero, sizeof (char), 1, fd);
+      fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
     }
   }
 
-  fwrite (&fps, sizeof (char), sizeof (uint64_t), fd);
+  fwrite (&fps, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
+  g_mutex_unlock(ctf_descriptor->mutex);
 }
 
 void
-do_print_interlatency_event (FILE * fd, int16_t event_id, uint32_t timestamp,
-    char *originpad, char *destinationpad, uint64_t time)
+do_print_interlatency_event (gint16 event_id, guint32 timestamp,
+    gchar *originpad, gchar *destinationpad, guint64 time)
 {
-  int size = strlen (originpad);
-  int pad_num = (size + 1) % 16;
-  char zero = 0;
+  gint size = strlen (originpad);
+  gint pad_num = (size + 1) % 16;
+  gchar zero = 0;
 
-  fwrite (&event_id, sizeof (char), sizeof (int16_t), fd);
-  fwrite (&timestamp, sizeof (char), sizeof (uint32_t), fd);
-  fwrite (originpad, sizeof (char), size + 1, fd);
+  g_mutex_lock(ctf_descriptor->mutex);
+  fwrite (&event_id, sizeof (gchar), sizeof (gint16), ctf_descriptor->datastream);
+  fwrite (&timestamp, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+  fwrite (originpad, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
   /* Verify if padding must be added */
   if (pad_num != 0) {
     pad_num = 16 - pad_num;
 
     for (; pad_num > 0; --pad_num) {
-      fwrite (&zero, sizeof (char), 1, fd);
+      fwrite (&zero, sizeof (gchar), 1, fd);
     }
   }
 
   size = strlen (destinationpad);
   pad_num = (size + 1) % 16;
-  fwrite (destinationpad, sizeof (char), size + 1, fd);
+  fwrite (destinationpad, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
   /* Verify if padding must be added */
   if (pad_num != 0) {
     pad_num = 16 - pad_num;
 
     for (; pad_num > 0; --pad_num) {
-      fwrite (&zero, sizeof (char), 1, fd);
+      fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
     }
   }
 
-  fwrite (&time, sizeof (char), sizeof (uint64_t), fd);
+  fwrite (&time, sizeof (gchar), sizeof (uint64_t), ctf_descriptor->datastream);
+  g_mutex_unlock(ctf_descriptor->mutex);
 }
 
 void
-do_print_scheduling_event (FILE * fd, int16_t event_id, uint32_t timestamp,
-    char *elementname, uint64_t time)
+do_print_scheduling_event (gint16 event_id, guint32 timestamp,
+    gchar *elementname, guint64 time)
 {
-  int size = strlen (elementname);
-  int pad_num = (size + 1) % 16;
-  char zero = 0;
+  gint size = strlen (elementname);
+  gint pad_num = (size + 1) % 16;
+  gchar zero = 0;
 
-  fwrite (&event_id, sizeof (char), sizeof (int16_t), fd);
-  fwrite (&timestamp, sizeof (char), sizeof (uint32_t), fd);
-  fwrite (elementname, sizeof (char), size + 1, fd);
+  g_mutex_lock(ctf_descriptor->mutex);
+  fwrite (&event_id, sizeof (gchar), sizeof (gint16), ctf_descriptor->datastream);
+  fwrite (&timestamp, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+  fwrite (elementname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
   /* Verify if padding must be added */
   if (pad_num != 0) {
     pad_num = 16 - pad_num;
 
     for (; pad_num > 0; --pad_num) {
-      fwrite (&zero, sizeof (char), 1, fd);
+      fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
     }
   }
 
-  fwrite (&time, sizeof (char), sizeof (uint64_t), fd);
+  fwrite (&time, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
+  g_mutex_unlock(ctf_descriptor->mutex);
 }
 
 void
-do_print_init_timer (FILE * fd, int16_t event_id, uint32_t timestamp,
-    uint32_t timer)
+do_print_init_timer (gint16 event_id, guint32 timestamp,
+    guint32 timer)
 {
-  uint32_t unknown = 0;
+  guint32 unknown = 0;
 
-  fwrite (&event_id, sizeof (char), sizeof (int16_t), fd);
-  fwrite (&timestamp, sizeof (char), sizeof (uint32_t), fd);
-  fwrite (&unknown, sizeof (char), sizeof (uint32_t), fd);
-  fwrite (&timer, sizeof (char), sizeof (uint32_t), fd);
+  g_mutex_lock(ctf_descriptor->mutex);
+  fwrite (&event_id, sizeof (gchar), sizeof (gint16), ctf_descriptor->datastream);
+  fwrite (&timestamp, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+  fwrite (&unknown, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+  fwrite (&timer, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+  g_mutex_unlock(ctf_descriptor->mutex);
 }

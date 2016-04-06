@@ -29,6 +29,7 @@
 #include "gstinterlatency.h"
 #include "gstscheduletime.h"
 #include "gstframerate.h"
+#include "gstctf.h"
 
 static gboolean
 plugin_init (GstPlugin * plugin)

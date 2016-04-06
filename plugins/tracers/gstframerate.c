@@ -35,6 +35,7 @@
 #include <glib.h>
 
 #include "gstframerate.h"
+#include "gstctf.h"
 
 GST_DEBUG_CATEGORY_STATIC (gst_framerate_debug);
 #define GST_CAT_DEFAULT gst_framerate_debug
@@ -57,6 +58,16 @@ struct _GstFramerateHash
   gint counter;
 };
 
+static const char framerate_metadata_event[] = "event {\n\
+	name = cpuusage;\n\
+	id = %d;\n\
+	stream_id = %d;\n\
+	fields := struct {\n\
+		string _padname;\n\
+		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _fps;\n\
+	};\n\
+};\n\
+\n";
 
 static void
 log_framerate (GstDebugCategory * cat, const char *fmt, ...)

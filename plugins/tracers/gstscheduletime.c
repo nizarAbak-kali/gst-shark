@@ -30,6 +30,7 @@
 
 #include <unistd.h>
 #include "gstscheduletime.h"
+#include "gstctf.h"
 
 #ifdef HAVE_SYS_RESOURCE_H
 #ifndef __USE_GNU
@@ -48,6 +49,17 @@ G_LOCK_DEFINE (_proc);
 #define gst_scheduletime_tracer_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstScheduletimeTracer, gst_scheduletime_tracer,
     GST_TYPE_TRACER, _do_init);
+
+static const char scheduling_metadata_event[] = "event {\n\
+	name = scheduling;\n\
+	id = %d;\n\
+	stream_id = %d;\n\
+	fields := struct {\n\
+		string _elementname;\n\
+		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _time;\n\
+	};\n\
+};\n\
+\n";
 
 static void
 schedule_pad_destroy (gpointer data)

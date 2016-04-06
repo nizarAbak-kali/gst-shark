@@ -31,6 +31,7 @@
 #include <unistd.h>
 #include "gstcpuusage.h"
 #include "gstcpuusagecompute.h"
+#include "gstctf.h"
 #include <glib/gstdio.h>
 
 #ifdef HAVE_SYS_RESOURCE_H
@@ -51,8 +52,19 @@ G_LOCK_DEFINE (_proc);
 G_DEFINE_TYPE_WITH_CODE (GstCPUUsageTracer, gst_cpuusage_tracer,
     GST_TYPE_TRACER, _do_init);
 
-gpointer cpuusage_thread_func (gpointer data);
 
+static const char cpuusage_metadata_event[] = "event {\n\
+	name = cpuusage;\n\
+	id = %d;\n\
+	stream_id = %d;\n\
+	fields := struct {\n\
+		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _cpunum;\n\
+		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _cpuload;\n\
+	};\n\
+};\n\
+\n";
+
+gpointer cpuusage_thread_func (gpointer data);
 
 static void
 do_stats (GstTracer * obj, guint64 ts)
