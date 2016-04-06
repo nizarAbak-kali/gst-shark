@@ -95,6 +95,8 @@ do_push_buffer_pre (GstTracer * self, guint64 ts, GstPad * pad)
 
     gst_tracer_log_trace (gst_structure_new (name,
             "time", G_TYPE_STRING, timeString->str, NULL));
+
+    do_print_proctime_event (PROCTIME_EVENT_ID, name, time);
   }
 }
 

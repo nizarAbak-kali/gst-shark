@@ -338,7 +338,7 @@ do_print_proctime_event (event_id id, gchar * elementname, guint64 time)
 }
 
 void
-do_print_framerate_event (event_id id, gchar * padname, guint64 fps)
+do_print_framerate_event (event_id id, const gchar * padname, guint64 fps)
 {
   gint size = strlen (padname);
   gint pad_num = (size + 1) % 16;
