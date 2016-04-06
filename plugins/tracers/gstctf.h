@@ -34,10 +34,9 @@ typedef enum
   SCHED_TIME_EVENT_ID,
 } event_id;
 
-void gst_vtf_init ();
-void gst_ctf_close ();
-void add_metadata_event_struct (const gchar * metadata_event, event_id id,
-    gint stream_id);
+gboolean gst_ctf_init (void);
+void gst_ctf_close (void);
+void add_metadata_event_struct (const gchar * metadata_event);
 void do_print_cpuusage_event (event_id id, guint32 cpunum, guint64 cpuload);
 void do_print_proctime_event (event_id id, gchar * elementname, guint64 time);
 void do_print_framerate_event (event_id id, gchar * padname, guint64 fps);

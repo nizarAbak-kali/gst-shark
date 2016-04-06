@@ -26,8 +26,9 @@
 #include <gst/gst.h>
 #include <glib.h>
 #include <glib/gstdio.h>
-#include <string.h>
 #include <glib/gprintf.h>
+#include <string.h>
+#include <unistd.h>
 
 #include "gstctf.h"
 
@@ -133,82 +134,6 @@ event {\n\
 	stream_id = 0;\n\
 };\n\
 ";
-
-static GstCtfDescriptor *
-create_new_ctf ()
-{
-  GstCtfDescriptor *ctf;
-  gchar *dir_name;
-  //~ gchar *metadata_file;
-  //~ gchar *datastream_file;
-  //~ time_t now = time (NULL);
-
-  //~ g_sprintf (metadata_file, "metadata");
-  //~ g_sprintf (datastream_file, "datastream");
-
-  /* Creating the output folder for the CTF output files. */
-#if 0
-  g_date_strftime (dir_name, 30, "gstshark_ctf_%Y%m%d%H%M%S", localtime (&now));
-#else
-  dir_name = "gstshark_ctf";
-#endif
-  if (!g_file_test (dir_name, G_FILE_TEST_EXISTS)) {
-    GST_ERROR ("@SFC: Creating %s directory.", dir_name);
-    g_mkdir (dir_name, 0666);
-  } else {
-    GST_ERROR ("@SFC: Directory %s already exists.", dir_name);
-  }
-
-  /* Allocating memory space for the private structure that will 
-     contains the file descriptors for the CTF ouput. */
-  ctf = g_malloc (sizeof (GstCtfDescriptor));
-
-  ctf->datastream = g_fopen ("metadata", "a");
-  ctf->metadata = g_fopen ("datastream", "a");
-  g_mutex_init (ctf->mutex);
-
-  //~ g_free (dir_name);
-  //~ g_free (datastream_file);
-  //~ g_free (metadata_file);
-
-  return ctf;
-}
-
-#if 0
-gboolean
-gst_ctf_init ()
-{
-  gchar UUID[] =
-      { 0xd1, 0x8e, 0x63, 0x74, 0x35, 0xa1, 0xcd, 0x42, 0x8e, 0x70, 0xa9, 0xcf,
-    0xfa, 0x71, 0x27, 0x93
-  };
-  gchar *UUIDstring = "d18e6374-35a1-cd42-8e70-a9cffa712793";
-
-  //~ g_sprintf (UUIDstring, "d18e6374-35a1-cd42-8e70-a9cffa712793");
-
-  if (ctf_descriptor) {
-    GST_ERROR ("@SFC: Error! Structure already exits!");
-    return FALSE;
-  }
-
-  ctf_descriptor = create_new_ctf ();
-  generate_datastream_header (UUID, sizeof (UUID), 0);
-  generate_metadata (1, 3, UUIDstring, BYTE_ORDER_LE);
-
-  //~ g_free (UUIDstring);
-
-  return TRUE;
-}
-
-void
-gst_ctf_close ()
-{
-  fclose (ctf_descriptor->metadata);
-  fclose (ctf_descriptor->datastream);
-  g_mutex_clear (ctf_descriptor->mutex);
-  g_free (ctf_descriptor);
-}
-
 static void
 generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
 {
@@ -216,14 +141,15 @@ generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
   guint64 time_stamp_end;
   guint32 events_discarted;
   guint32 cpu_id;
-  gint Magic = 0xC1FC1FC1;
+  guint32 Magic = 0xC1FC1FC1;
+  guint32 unknown;
 
   /* The begin of the data stream header is compound by the Magic Number,
      the trace UUID and the Stream ID. These are all required fields. */
 
   g_mutex_lock (ctf_descriptor->mutex);
   /* Magic Number */
-  fwrite (&Magic, sizeof (gchar), sizeof (gint), ctf_descriptor->datastream);
+  fwrite (&Magic, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
 
   /* Trace UUID */
   fwrite (UUID, sizeof (gchar), UUID_size, ctf_descriptor->datastream);
@@ -256,7 +182,7 @@ generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
       ctf_descriptor->datastream);
 
   /* Padding needed */
-  guint32 unknown = 0x0000FFFF;
+  unknown = 0x0000FFFF;
   fwrite (&unknown, sizeof (gchar), sizeof (guint32),
       ctf_descriptor->datastream);
 
@@ -264,7 +190,7 @@ generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
 }
 
 static void
-generate_metadata (int major, int minor, gchar * UUID, int byte_order)
+generate_metadata (int major, int minor, const gchar * UUID, int byte_order)
 {
   /* Writing the first sections of the metadata file with the structures 
      and the definitions that will be needed in the future. */
@@ -275,17 +201,90 @@ generate_metadata (int major, int minor, gchar * UUID, int byte_order)
   g_mutex_unlock (ctf_descriptor->mutex);
 }
 
+static GstCtfDescriptor *
+create_new_ctf (void)
+{
+  GstCtfDescriptor *ctf;
+  const gchar *dir_name;
+  //~ gchar *metadata_file;
+  //~ gchar *datastream_file;
+  //~ time_t now = time (NULL);
+
+  //~ g_sprintf (metadata_file, "metadata");
+  //~ g_sprintf (datastream_file, "datastream");
+
+  /* Creating the output folder for the CTF output files. */
+#if 0
+  g_date_strftime (dir_name, 30, "gstshark_ctf_%Y%m%d%H%M%S", localtime (&now));
+#else
+  //g_sprintf (dir_name, "gstshark_ctf");
+  dir_name = "gstshark_ctf";
+#endif
+  if (!g_file_test (dir_name, G_FILE_TEST_EXISTS)) {
+    GST_ERROR ("@SFC: Creating %s directory.", dir_name);
+    g_mkdir (dir_name, 0666);
+  } else {
+    GST_ERROR ("@SFC: Directory %s already exists.", dir_name);
+  }
+
+  /* Allocating memory space for the private structure that will 
+     contains the file descriptors for the CTF ouput. */
+  ctf = g_malloc (sizeof (GstCtfDescriptor));
+
+  ctf->datastream = g_fopen ("metadata", "a");
+  ctf->metadata = g_fopen ("datastream", "a");
+  g_mutex_init (ctf->mutex);
+
+  //g_free (dir_name);
+  //~ g_free (datastream_file);
+  //~ g_free (metadata_file);
+
+  return ctf;
+}
+
+gboolean
+gst_ctf_init (void)
+{
+  gchar UUID[] =
+      { 0xd1, 0x8e, 0x63, 0x74, 0x35, 0xa1, 0xcd, 0x42, 0x8e, 0x70, 0xa9, 0xcf,
+    0xfa, 0x71, 0x27, 0x93
+  };
+  const gchar *UUIDstring;
+
+  UUIDstring = "d18e6374-35a1-cd42-8e70-a9cffa712793";
+
+  if (ctf_descriptor) {
+    GST_ERROR ("@SFC: Error! Structure already exits!");
+    return FALSE;
+  }
+
+  ctf_descriptor = create_new_ctf ();
+  generate_datastream_header (UUID, sizeof (UUID), 0);
+  generate_metadata (1, 3, UUIDstring, BYTE_ORDER_LE);
+
+  //g_free (UUIDstring);
+
+  return TRUE;
+}
+
 void
-add_metadata_event_struct (const char *metadata_event, event_id id,
-    gint stream_id)
+gst_ctf_close (void)
+{
+  fclose (ctf_descriptor->metadata);
+  fclose (ctf_descriptor->datastream);
+  g_mutex_clear (ctf_descriptor->mutex);
+  g_free (ctf_descriptor);
+}
+
+void
+add_metadata_event_struct (const gchar * metadata_event)
 {
   /* This function only writes the event structure to the metadata file, it
      depends entirely of what is passed as an argument. */
   g_mutex_lock (ctf_descriptor->mutex);
-  g_fprintf (ctf_descriptor->metadata, metadata_event, id, stream_id);
+  g_fprintf (ctf_descriptor->metadata, "%s", metadata_event);
   g_mutex_unlock (ctf_descriptor->mutex);
 }
-#endif
 
 static void
 add_event_header (event_id id)
@@ -396,7 +395,7 @@ do_print_interlatency_event (event_id id,
     }
   }
 
-  fwrite (&time, sizeof (gchar), sizeof (uint64_t), ctf_descriptor->datastream);
+  fwrite (&time, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
   g_mutex_unlock (ctf_descriptor->mutex);
 }
 
