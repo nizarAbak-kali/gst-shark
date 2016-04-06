@@ -27,7 +27,6 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <string.h>
-#include <stdint.h>
 #include <glib/gprintf.h>
 
 #include "gstctf.h"
@@ -277,7 +276,7 @@ generate_metadata (int major, int minor, gchar * UUID, int byte_order)
 }
 
 void
-add_metadata_event_struct (const char *metadata_event, gint id, gint stream_id)
+add_metadata_event_struct (const char *metadata_event, event_id id, gint stream_id)
 {
   /* This function only writes the event structure to the metadata file, it
      depends entirely of what is passed as an argument. */
@@ -290,22 +289,22 @@ add_metadata_event_struct (const char *metadata_event, gint id, gint stream_id)
 static void
 add_event_header (event_id id)
 {
-  uint32_t timestamp;
+  guint32 timestamp;
   GstClockTime elapsed =
       GST_CLOCK_DIFF (ctf_descriptor->start_time, gst_util_get_timestamp ());
   elapsed = elapsed / 1000;
   timestamp = elapsed;
   /* Add event ID */
-  fwrite (&id, sizeof (char), sizeof (int16_t), ctf_descriptor->datastream);
-  fwrite (&timestamp, sizeof (char), sizeof (uint32_t),
+  fwrite (&id, sizeof (gchar), sizeof (gint16), ctf_descriptor->datastream);
+  fwrite (&timestamp, sizeof (gchar), sizeof (guint32),
       ctf_descriptor->datastream);
 }
 
 void
-do_print_cpuusage_event (gint16 event_id, guint32 cpunum, guint64 cpuload)
+do_print_cpuusage_event (event_id id, guint32 cpunum, guint64 cpuload)
 {
   g_mutex_lock (ctf_descriptor->mutex);
-  add_event_header (event_id);
+  add_event_header (id);
   fwrite (&cpunum, sizeof (gchar), sizeof (guint32),
       ctf_descriptor->datastream);
   fwrite (&cpuload, sizeof (gchar), sizeof (guint64),
@@ -315,14 +314,14 @@ do_print_cpuusage_event (gint16 event_id, guint32 cpunum, guint64 cpuload)
 
 
 void
-do_print_proctime_event (gint16 event_id, gchar * elementname, guint64 time)
+do_print_proctime_event (event_id id, gchar * elementname, guint64 time)
 {
   gint size = strlen (elementname);
   gint pad_num = (size + 1) % 16;
   gchar zero = 0;
 
   g_mutex_lock (ctf_descriptor->mutex);
-  add_event_header (event_id);
+  add_event_header (id);
   fwrite (elementname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
   /* Verify if padding must be added */
@@ -339,14 +338,14 @@ do_print_proctime_event (gint16 event_id, gchar * elementname, guint64 time)
 }
 
 void
-do_print_framerate_event (gint16 event_id, gchar * padname, guint64 fps)
+do_print_framerate_event (event_id id, gchar * padname, guint64 fps)
 {
   gint size = strlen (padname);
   gint pad_num = (size + 1) % 16;
   gchar zero = 0;
 
   g_mutex_lock (ctf_descriptor->mutex);
-  add_event_header (event_id);
+  add_event_header (id);
   fwrite (padname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
   /* Verify if padding must be added */
@@ -363,7 +362,7 @@ do_print_framerate_event (gint16 event_id, gchar * padname, guint64 fps)
 }
 
 void
-do_print_interlatency_event (gint16 event_id,
+do_print_interlatency_event (event_id id,
     gchar * originpad, gchar * destinationpad, guint64 time)
 {
   gint size = strlen (originpad);
@@ -371,7 +370,7 @@ do_print_interlatency_event (gint16 event_id,
   gchar zero = 0;
 
   g_mutex_lock (ctf_descriptor->mutex);
-  add_event_header (event_id);
+  add_event_header (id);
   fwrite (originpad, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
   /* Verify if padding must be added */
@@ -401,14 +400,14 @@ do_print_interlatency_event (gint16 event_id,
 }
 
 void
-do_print_scheduling_event (gint16 event_id, gchar * elementname, guint64 time)
+do_print_scheduling_event (event_id id, gchar * elementname, guint64 time)
 {
   gint size = strlen (elementname);
   gint pad_num = (size + 1) % 16;
   gchar zero = 0;
 
   g_mutex_lock (ctf_descriptor->mutex);
-  add_event_header (event_id);
+  add_event_header (id);
   fwrite (elementname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
   /* Verify if padding must be added */
@@ -425,12 +424,12 @@ do_print_scheduling_event (gint16 event_id, gchar * elementname, guint64 time)
 }
 
 void
-do_print_init_timer (gint16 event_id)
+do_print_init_timer (event_id id)
 {
   guint32 unknown = 0;
 
   g_mutex_lock (ctf_descriptor->mutex);
-  add_event_header (event_id);
+  add_event_header (id);
   fwrite (&unknown, sizeof (gchar), sizeof (guint32),
       ctf_descriptor->datastream);
   g_mutex_unlock (ctf_descriptor->mutex);
