@@ -320,22 +320,11 @@ void
 do_print_proctime_event (event_id id, gchar * elementname, guint64 time)
 {
   gint size = strlen (elementname);
-  gint pad_num = (size + 1) % 16;
-  gchar zero = 0;
+
 
   g_mutex_lock (&ctf_descriptor->mutex);
   add_event_header (id);
   fwrite (elementname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
-
-  /* Verify if padding must be added */
-  if (pad_num != 0) {
-    pad_num = 16 - pad_num;
-
-    for (; pad_num > 0; --pad_num) {
-      fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
-    }
-  }
-
   fwrite (&time, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
