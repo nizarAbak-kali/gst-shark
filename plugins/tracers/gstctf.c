@@ -333,21 +333,10 @@ void
 do_print_framerate_event (event_id id, const gchar * padname, guint64 fps)
 {
   gint size = strlen (padname);
-  gint pad_num = (size + 1) % 32;
-  gchar zero = 0;
 
   g_mutex_lock (&ctf_descriptor->mutex);
   add_event_header (id);
   fwrite (padname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
-
-  /* Verify if padding must be added */
-  if (pad_num != 0) {
-    pad_num = 32 - pad_num;
-
-    for (; pad_num > 0; --pad_num) {
-      fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
-    }
-  }
 
   fwrite (&fps, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
   g_mutex_unlock (&ctf_descriptor->mutex);
@@ -358,34 +347,13 @@ do_print_interlatency_event (event_id id,
     gchar * originpad, gchar * destinationpad, guint64 time)
 {
   gint size = strlen (originpad);
-  gint pad_num = (size + 1) % 32;
-  gchar zero = 0;
 
   g_mutex_lock (&ctf_descriptor->mutex);
   add_event_header (id);
   fwrite (originpad, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
-  /* Verify if padding must be added */
-  if (pad_num != 0) {
-    pad_num = 32 - pad_num;
-
-    for (; pad_num > 0; --pad_num) {
-      fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
-    }
-  }
-
   size = strlen (destinationpad);
-  pad_num = (size + 1) % 32;
   fwrite (destinationpad, sizeof (gchar), size + 1, ctf_descriptor->datastream);
-
-  /* Verify if padding must be added */
-  if (pad_num != 0) {
-    pad_num = 32 - pad_num;
-
-    for (; pad_num > 0; --pad_num) {
-      fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
-    }
-  }
 
   fwrite (&time, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
   g_mutex_unlock (&ctf_descriptor->mutex);
@@ -395,21 +363,10 @@ void
 do_print_scheduling_event (event_id id, gchar * elementname, guint64 time)
 {
   gint size = strlen (elementname);
-  gint pad_num = (size + 1) % 16;
-  gchar zero = 0;
 
   g_mutex_lock (&ctf_descriptor->mutex);
   add_event_header (id);
   fwrite (elementname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
-
-  /* Verify if padding must be added */
-  if (pad_num != 0) {
-    pad_num = 16 - pad_num;
-
-    for (; pad_num > 0; --pad_num) {
-      fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
-    }
-  }
 
   fwrite (&time, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
   g_mutex_unlock (&ctf_descriptor->mutex);
