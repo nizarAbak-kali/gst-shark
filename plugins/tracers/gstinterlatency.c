@@ -275,7 +275,8 @@ gst_interlatency_tracer_init (GstInterLatencyTracer * self)
   gst_tracing_register_hook (tracer, "pad-push-event-pre",
       G_CALLBACK (do_push_event_pre));
 
-  metadata_event = g_strdup_printf (interlatency_metadata_event, 1, 0);
+  metadata_event =
+      g_strdup_printf (interlatency_metadata_event, INTERLATENCY_EVENT_ID, 0);
   add_metadata_event_struct (metadata_event);
   g_free (metadata_event);
 }

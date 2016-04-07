@@ -245,7 +245,7 @@ gst_framerate_tracer_init (GstFramerateTracer * self)
               "min", G_TYPE_INT, G_GUINT64_CONSTANT (0),
               "max", G_TYPE_INT, G_GUINT64_CONSTANT (5000), NULL), NULL));
 
-  metadata_event = g_strdup_printf (framerate_metadata_event, 1, 0);
+  metadata_event = g_strdup_printf (framerate_metadata_event, FPS_EVENT_ID, 0);
   add_metadata_event_struct (metadata_event);
   g_free (metadata_event);
 }

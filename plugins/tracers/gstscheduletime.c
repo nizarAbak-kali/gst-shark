@@ -201,7 +201,8 @@ gst_scheduletime_tracer_init (GstScheduletimeTracer * self)
               G_TYPE_INT64, "description", G_TYPE_STRING,
               "Scheduling time (Nanoseconds)", NULL), NULL));
 
-  metadata_event = g_strdup_printf (scheduling_metadata_event, 1, 0);
+  metadata_event =
+      g_strdup_printf (scheduling_metadata_event, SCHED_TIME_EVENT_ID, 0);
   add_metadata_event_struct (metadata_event);
   g_free (metadata_event);
 }
