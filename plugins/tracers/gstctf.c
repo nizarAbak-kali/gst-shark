@@ -94,6 +94,7 @@ struct packet_context {\n\
 	uint64_clock_monotonic_t timestamp_begin;\n\
 	uint64_clock_monotonic_t timestamp_end;\n\
 	uint32_t events_discarded;\n\
+	uint32_t cpu_id;\n\
 };\n\
 \n\
 struct event_header_compact {\n\
@@ -261,6 +262,7 @@ gst_ctf_init (void)
   ctf_descriptor = create_new_ctf ();
   generate_datastream_header (UUID, sizeof (UUID), 0);
   generate_metadata (1, 3, UUIDstring, BYTE_ORDER_LE);
+
   do_print_ctf_init (INIT_EVENT_ID);
 
   //g_free (UUIDstring);
