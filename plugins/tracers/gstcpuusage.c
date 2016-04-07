@@ -139,7 +139,8 @@ gst_cpuusage_tracer_init (GstCPUUsageTracer * self)
               "max", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (100), NULL), NULL));
 
 
-  metadata_event = g_strdup_printf (cpuusage_metadata_event, 1, 0);
+  metadata_event =
+      g_strdup_printf (cpuusage_metadata_event, CPUUSAGE_EVENT_ID, 0);
   add_metadata_event_struct (metadata_event);
   g_free (metadata_event);
 }
