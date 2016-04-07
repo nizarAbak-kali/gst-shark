@@ -344,7 +344,7 @@ void
 do_print_framerate_event (event_id id, const gchar * padname, guint64 fps)
 {
   gint size = strlen (padname);
-  gint pad_num = (size + 1) % 16;
+  gint pad_num = (size + 1) % 32;
   gchar zero = 0;
 
   g_mutex_lock (&ctf_descriptor->mutex);
@@ -353,7 +353,7 @@ do_print_framerate_event (event_id id, const gchar * padname, guint64 fps)
 
   /* Verify if padding must be added */
   if (pad_num != 0) {
-    pad_num = 16 - pad_num;
+    pad_num = 32 - pad_num;
 
     for (; pad_num > 0; --pad_num) {
       fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);

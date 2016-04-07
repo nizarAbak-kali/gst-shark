@@ -35,7 +35,6 @@
 static gboolean
 plugin_init (GstPlugin * plugin)
 {
-  g_printf ("%s %d\n", __FUNCTION__, __LINE__);
   if (!gst_tracer_register (plugin, "cpuusage",
           gst_cpuusage_tracer_get_type ())) {
     return FALSE;
