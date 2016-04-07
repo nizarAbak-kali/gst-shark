@@ -62,8 +62,8 @@ static const char interlatency_metadata_event[] = "event {\n\
 	id = %d;\n\
 	stream_id = %d;\n\
 	fields := struct {\n\
-		integer { size = 8; align = 8; signed = 1; encoding = UTF8; base = 10; } _originpad[16];\n\
-		integer { size = 8; align = 8; signed = 1; encoding = UTF8; base = 10; } _destinationpad[16];\n\
+		integer { size = 8; align = 8; signed = 1; encoding = UTF8; base = 10; } _src[32];\n\
+		integer { size = 8; align = 8; signed = 1; encoding = UTF8; base = 10; } _element[32];\n\
 		integer { size = 64; align = 8; signed = 0; encoding = none; base = 10; } _time;\n\
 	};\n\
 };\n\

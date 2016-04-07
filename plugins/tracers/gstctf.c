@@ -369,7 +369,7 @@ do_print_interlatency_event (event_id id,
     gchar * originpad, gchar * destinationpad, guint64 time)
 {
   gint size = strlen (originpad);
-  gint pad_num = (size + 1) % 16;
+  gint pad_num = (size + 1) % 32;
   gchar zero = 0;
 
   g_mutex_lock (&ctf_descriptor->mutex);
@@ -378,7 +378,7 @@ do_print_interlatency_event (event_id id,
 
   /* Verify if padding must be added */
   if (pad_num != 0) {
-    pad_num = 16 - pad_num;
+    pad_num = 32 - pad_num;
 
     for (; pad_num > 0; --pad_num) {
       fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
@@ -386,12 +386,12 @@ do_print_interlatency_event (event_id id,
   }
 
   size = strlen (destinationpad);
-  pad_num = (size + 1) % 16;
+  pad_num = (size + 1) % 32;
   fwrite (destinationpad, sizeof (gchar), size + 1, ctf_descriptor->datastream);
 
   /* Verify if padding must be added */
   if (pad_num != 0) {
-    pad_num = 16 - pad_num;
+    pad_num = 32 - pad_num;
 
     for (; pad_num > 0; --pad_num) {
       fwrite (&zero, sizeof (gchar), 1, ctf_descriptor->datastream);
