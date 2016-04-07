@@ -76,7 +76,6 @@ clock { \n\
 	description = \"Monotonic Clock\"; \n\
 	freq = 1000000; /* Frequency, in Hz */ \n\
 	/* clock value offset from Epoch is: offset * (1/freq) */ \n\
-	/*offset = 2160000000;*/\n\
     offset_s = 21600; \n\
 };\n\
 \n\
@@ -93,24 +92,9 @@ typealias integer {\n\
 struct packet_context {\n\
 	uint64_clock_monotonic_t timestamp_begin;\n\
 	uint64_clock_monotonic_t timestamp_end;\n\
-	uint32_t events_discarded;\n\
-	uint32_t cpu_id;\n\
 };\n\
 \n\
-struct event_header_compact {\n\
-	enum : uint5_t { compact = 0 ... 30, extended = 31 } id;\n\
-	variant <id> {\n\
-		struct {\n\
-			uint27_t timestamp;\n\
-		} compact;\n\
-		struct {\n\
-			uint32_t id;\n\
-			uint64_t timestamp;\n\
-		} extended;\n\
-	} v;\n\
-} align(8);\n\
-\n\
-struct event_header_large {\n\
+struct event_header {\n\
 	enum : uint16_t { compact = 0 ... 65534, extended = 65535 } id;\n\
 	variant <id> {\n\
 		struct {\n\
@@ -125,7 +109,7 @@ struct event_header_large {\n\
 \n\
 stream {\n\
 	id = 0;\n\
-	event.header := struct event_header_large;\n\
+	event.header := struct event_header;\n\
 	packet.context := struct packet_context;\n\
 };\n\
 \n\
@@ -141,8 +125,6 @@ generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
 {
   guint64 time_stamp_begin;
   guint64 time_stamp_end;
-  guint32 events_discarted;
-  guint32 cpu_id;
   guint32 Magic = 0xC1FC1FC1;
   guint32 unknown;
 
@@ -164,23 +146,13 @@ generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
      fields are optional. */
 
   /* Time Stamp begin */
-  time_stamp_begin = 0x3e3db41faf8;     // 0xf8fa41dbe3030000
+  time_stamp_begin = 0;
   fwrite (&time_stamp_begin, sizeof (gchar), sizeof (guint64),
       ctf_descriptor->datastream);
 
   /* Time Stamp end */
-  time_stamp_end = 0x000003e3ec8152ee;  // 0xee5281ece3030000;
+  time_stamp_end = 0;
   fwrite (&time_stamp_end, sizeof (gchar), sizeof (guint64),
-      ctf_descriptor->datastream);
-
-  /* Events discarted */
-  events_discarted = 0x0;
-  fwrite (&events_discarted, sizeof (gchar), sizeof (guint32),
-      ctf_descriptor->datastream);
-
-  /* CPU ID */
-  cpu_id = 0x0;
-  fwrite (&cpu_id, sizeof (gchar), sizeof (guint32),
       ctf_descriptor->datastream);
 
   /* Padding needed */
@@ -206,7 +178,6 @@ uuid_to_uuidstring (gchar * uuid_string, gchar * uuid)
     g_sprintf (uuid_string_idx, "%x", byte);
     uuid_string_idx += 2;
   }
-
   *(uuid_string_idx++) = '-';
 
   for (; uuid_idx < 6; ++uuid_idx) {
