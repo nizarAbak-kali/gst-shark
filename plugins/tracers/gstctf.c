@@ -192,13 +192,66 @@ generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
 }
 
 static void
-generate_metadata (int major, int minor, const gchar * UUID, int byte_order)
+uuid_to_uuidstring (gchar * uuid_string, gchar * uuid)
+{
+  gchar *uuid_string_idx;
+  gint32 byte;
+  gint uuid_idx;
+
+  uuid_string_idx = uuid_string;
+  uuid_idx = 0;
+  for (uuid_idx = 0; uuid_idx < 4; ++uuid_idx) {
+    byte = 0xFF & uuid[uuid_idx];
+
+    g_sprintf (uuid_string_idx, "%x", byte);
+    uuid_string_idx += 2;
+  }
+
+  *(uuid_string_idx++) = '-';
+
+  for (; uuid_idx < 6; ++uuid_idx) {
+    byte = 0xFF & uuid[uuid_idx];
+    g_sprintf (uuid_string_idx, "%x", byte);
+    uuid_string_idx += 2;
+  }
+  *(uuid_string_idx++) = '-';
+
+  for (; uuid_idx < 8; ++uuid_idx) {
+    byte = 0xFF & uuid[uuid_idx];
+
+    g_sprintf (uuid_string_idx, "%x", byte);
+    uuid_string_idx += 2;
+  }
+  *(uuid_string_idx++) = '-';
+
+  for (; uuid_idx < 10; ++uuid_idx) {
+    byte = 0xFF & uuid[uuid_idx];
+    g_sprintf (uuid_string_idx, "%x", byte);
+    uuid_string_idx += 2;
+  }
+  *(uuid_string_idx++) = '-';
+
+  for (; uuid_idx < 16; ++uuid_idx) {
+    byte = 0xFF & uuid[uuid_idx];
+    g_sprintf (uuid_string_idx, "%x", byte);
+    uuid_string_idx += 2;
+  }
+
+  *++uuid_string_idx = 0;
+}
+
+static void
+generate_metadata (gint major, gint minor, gchar * UUID, gint byte_order)
 {
   /* Writing the first sections of the metadata file with the structures 
      and the definitions that will be needed in the future. */
 
+  gchar uuid_string[] = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX0";
+  uuid_to_uuidstring (uuid_string, UUID);
+  g_printf ("%s\n", uuid_string);
+
   g_mutex_lock (&ctf_descriptor->mutex);
-  g_fprintf (ctf_descriptor->metadata, metadata_fmt, major, minor, UUID,
+  g_fprintf (ctf_descriptor->metadata, metadata_fmt, major, minor, uuid_string,
       byte_order ? "le" : "be");
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
@@ -251,8 +304,6 @@ gst_ctf_init (void)
       { 0xd1, 0x8e, 0x63, 0x74, 0x35, 0xa1, 0xcd, 0x42, 0x8e, 0x70, 0xa9, 0xcf,
     0xfa, 0x71, 0x27, 0x93
   };
-  const gchar *UUIDstring;
-  UUIDstring = "d18e6374-35a1-cd42-8e70-a9cffa712793";
 
   if (ctf_descriptor) {
     GST_ERROR ("@SFC: Error! Structure already exits!");
@@ -261,11 +312,10 @@ gst_ctf_init (void)
 
   ctf_descriptor = create_new_ctf ();
   generate_datastream_header (UUID, sizeof (UUID), 0);
-  generate_metadata (1, 3, UUIDstring, BYTE_ORDER_LE);
+  generate_metadata (1, 3, UUID, BYTE_ORDER_LE);
 
   do_print_ctf_init (INIT_EVENT_ID);
 
-  //g_free (UUIDstring);
 
   return TRUE;
 }

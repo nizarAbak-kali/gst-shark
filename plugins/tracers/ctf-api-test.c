@@ -40,7 +40,7 @@ char UUID[] =
 };
 
 //~ char UUID[] = {0x67,0xE1,0x89,0xCE,0xA4,0xA0,0x49,0x04,0x83,0x70,0x3B,0xFE,0xFF,0xF3,0x6A,0xDC};
-char *UUIDstring = "d18e6374-35a1-cd42-8e70-a9cffa712793";
+//~ char *UUIDstring = "d18e6374-35a1-cd42-8e70-a9cffa712793";
 
 /* Metadata format string */
 static const char metadata_fmt2[] = "\
@@ -201,6 +201,55 @@ TracerInit (tracer_struct * tracer)
 }
 
 void
+UUID_to_UUIDstring (char *uuid_string, char *uuid)
+{
+  char *uuid_string_idx;
+  int byte;
+
+  uuid_string_idx = uuid_string;
+  int uuid_idx = 0;
+  for (uuid_idx = 0; uuid_idx < 4; ++uuid_idx) {
+    byte = 0xFF & uuid[uuid_idx];
+
+    g_sprintf (uuid_string_idx, "%x", byte);
+    uuid_string_idx += 2;
+  }
+
+  *(uuid_string_idx++) = '-';
+
+  for (; uuid_idx < 6; ++uuid_idx) {
+    byte = 0xFF & uuid[uuid_idx];
+    g_sprintf (uuid_string_idx, "%x", byte);
+    uuid_string_idx += 2;
+  }
+  *(uuid_string_idx++) = '-';
+
+  for (; uuid_idx < 8; ++uuid_idx) {
+    byte = 0xFF & uuid[uuid_idx];
+
+    g_sprintf (uuid_string_idx, "%x", byte);
+    uuid_string_idx += 2;
+    printf ("%s\n", uuid_string);
+  }
+  *(uuid_string_idx++) = '-';
+
+  for (; uuid_idx < 10; ++uuid_idx) {
+    byte = 0xFF & uuid[uuid_idx];
+    g_sprintf (uuid_string_idx, "%x", byte);
+    uuid_string_idx += 2;
+  }
+  *(uuid_string_idx++) = '-';
+
+  for (; uuid_idx < 16; ++uuid_idx) {
+    byte = 0xFF & uuid[uuid_idx];
+    g_sprintf (uuid_string_idx, "%x", byte);
+    uuid_string_idx += 2;
+  }
+
+  *++uuid_string_idx = 0;
+}
+
+void
 TracerFinalize (tracer_struct * tracer)
 {
   fclose (tracer->metadata);
@@ -308,10 +357,13 @@ CTFMetadataGenerate (int major, int minor, char *UUID, int byte_order)
 {
   /* Convert UUID */
   //~ bt_uuid_unparse(UUID, UUIDstring);
+  char uuid_string[] = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX0";
+  UUID_to_UUIDstring (uuid_string, UUID);
+  printf ("%s\n", uuid_string);
 
   fprintf (tracer.metadata, metadata_fmt2, major,       /* major */
       minor,                    /* minor */
-      UUIDstring, byte_order ? "le" : "be");
+      uuid_string, byte_order ? "le" : "be");
 }
 
 
@@ -483,6 +535,10 @@ main (int argc, char *argv[])
   CTFNewFPSEvent (FPS_EVENT_ID, "filesrc0", 15);
 
   TracerFinalize (&tracer);
+
+  char uuid_string[] = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX0";
+  UUID_to_UUIDstring (uuid_string, UUID);
+  printf ("%s\n", uuid_string);
 
   return 0;
 }
