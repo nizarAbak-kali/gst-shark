@@ -28,9 +28,10 @@
 #include <glib/gstdio.h>
 #include <glib/gprintf.h>
 #include <string.h>
-#include <unistd.h>
 
 #include "gstctf.h"
+
+#define MAX_DIRNAME_LEN (30)
 
 typedef enum
 {
@@ -44,6 +45,7 @@ struct _GstCtfDescriptor
   FILE *datastream;
   GMutex mutex;
   GstClockTime start_time;
+  gchar *ctf_dir_name;
 };
 
 static GstCtfDescriptor *ctf_descriptor = NULL;
@@ -217,7 +219,6 @@ generate_metadata (gint major, gint minor, gchar * UUID, gint byte_order)
 
   gchar uuid_string[] = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX0";
   uuid_to_uuidstring (uuid_string, UUID);
-  g_printf ("%s\n", uuid_string);
 
   g_mutex_lock (&ctf_descriptor->mutex);
   g_fprintf (ctf_descriptor->metadata, metadata_fmt, major, minor, uuid_string,
@@ -225,43 +226,84 @@ generate_metadata (gint major, gint minor, gchar * UUID, gint byte_order)
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
+gchar *
+get_ctf_path_name (void)
+{
+  return ctf_descriptor->ctf_dir_name;
+}
+
+static void
+create_ctf_path (GstCtfDescriptor * ctf)
+{
+  gchar dir_name[30];
+  gchar *env_dir_name;
+  gint size_env_path = 0;
+  time_t now = time (NULL);
+
+  g_return_if_fail (ctf);
+
+  env_dir_name = (gchar *) g_getenv ("GST_SHARK_TRACE_DIR");
+
+  if (G_LIKELY (env_dir_name == NULL)) {
+    /* Creating the output folder for the CTF output files. */
+    strftime (dir_name, MAX_DIRNAME_LEN, "gstshark_%Y%m%d%H%M%S",
+        localtime (&now));
+    ctf->ctf_dir_name = g_malloc (MAX_DIRNAME_LEN + 1);
+    g_stpcpy (ctf->ctf_dir_name, dir_name);
+  } else {
+    size_env_path = strlen (env_dir_name);
+    ctf->ctf_dir_name = g_malloc (size_env_path + 1);
+    g_stpcpy (ctf->ctf_dir_name, env_dir_name);
+  }
+
+  if (!g_file_test (ctf->ctf_dir_name, G_FILE_TEST_EXISTS)) {
+    if (g_mkdir (ctf->ctf_dir_name, 0775) == 0) {
+      GST_INFO ("Directory %s did not exist and was created sucessfully.",
+          ctf->ctf_dir_name);
+    } else {
+      GST_ERROR ("Directory %s could not be created.", ctf->ctf_dir_name);
+    }
+  } else {
+    GST_INFO ("Directory %s already exists in the current path.",
+        ctf->ctf_dir_name);
+  }
+
+}
+
 static GstCtfDescriptor *
 create_new_ctf (void)
 {
   GstCtfDescriptor *ctf;
-  const gchar *dir_name;
-  //~ gchar *metadata_file;
-  //~ gchar *datastream_file;
-  //~ time_t now = time (NULL);
-
-  //~ g_sprintf (metadata_file, "metadata");
-  //~ g_sprintf (datastream_file, "datastream");
-  /* Creating the output folder for the CTF output files. */
-#if 0
-  g_date_strftime (dir_name, 30, "gstshark_ctf_%Y%m%d%H%M%S", localtime (&now));
-#else
-  //g_sprintf (dir_name, "gstshark_ctf");
-  dir_name = "gstshark_ctf";
-#endif
-
-  if (!g_file_test (dir_name, G_FILE_TEST_EXISTS)) {
-    GST_ERROR ("@SFC: Creating %s directory.", dir_name);
-    g_mkdir (dir_name, 0666);
-  } else {
-    GST_ERROR ("@SFC: Directory %s already exists.", dir_name);
-  }
+  gchar *metadata_file;
+  gchar *datastream_file;
 
   /* Allocating memory space for the private structure that will 
      contains the file descriptors for the CTF ouput. */
   ctf = g_malloc (sizeof (GstCtfDescriptor));
 
-  ctf->datastream = g_fopen ("datastream", "w");
-  ctf->metadata = g_fopen ("metadata", "w");
+  /* Creating the output folder for the CTF output files. */
+  create_ctf_path (ctf);
+
+  datastream_file =
+      g_strjoin (G_DIR_SEPARATOR_S, ctf->ctf_dir_name, "datastream", NULL);
+  metadata_file =
+      g_strjoin (G_DIR_SEPARATOR_S, ctf->ctf_dir_name, "metadata", NULL);
+
+  ctf->datastream = g_fopen (datastream_file, "w");
+  if (ctf->datastream == NULL) {
+    GST_ERROR ("Could not open datastream file, path does not exist.");
+  }
+
+  ctf->metadata = g_fopen (metadata_file, "w");
+  if (ctf->metadata == NULL) {
+    GST_ERROR ("Could not open metadata file, path does not exist.");
+  }
+
   g_mutex_init (&ctf->mutex);
   ctf->start_time = gst_util_get_timestamp ();
-  //g_free (dir_name);
-  //~ g_free (datastream_file);
-  //~ g_free (metadata_file);
+
+  g_free (datastream_file);
+  g_free (metadata_file);
 
   return ctf;
 }
@@ -275,7 +317,7 @@ gst_ctf_init (void)
   };
 
   if (ctf_descriptor) {
-    GST_ERROR ("@SFC: Error! Structure already exits!");
+    GST_ERROR ("CTF Descriptor already exists.");
     return FALSE;
   }
 
@@ -284,7 +326,6 @@ gst_ctf_init (void)
   generate_metadata (1, 3, UUID, BYTE_ORDER_LE);
 
   do_print_ctf_init (INIT_EVENT_ID);
-
 
   return TRUE;
 }
@@ -295,6 +336,7 @@ gst_ctf_close (void)
   fclose (ctf_descriptor->metadata);
   fclose (ctf_descriptor->datastream);
   g_mutex_clear (&ctf_descriptor->mutex);
+  g_free (ctf_descriptor->ctf_dir_name);
   g_free (ctf_descriptor);
 }
 
@@ -340,7 +382,6 @@ do_print_proctime_event (event_id id, gchar * elementname, guint64 time)
 {
   gint size = strlen (elementname);
 
-
   g_mutex_lock (&ctf_descriptor->mutex);
   add_event_header (id);
   fwrite (elementname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
@@ -356,7 +397,6 @@ do_print_framerate_event (event_id id, const gchar * padname, guint64 fps)
   g_mutex_lock (&ctf_descriptor->mutex);
   add_event_header (id);
   fwrite (padname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
-
   fwrite (&fps, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
@@ -386,7 +426,6 @@ do_print_scheduling_event (event_id id, gchar * elementname, guint64 time)
   g_mutex_lock (&ctf_descriptor->mutex);
   add_event_header (id);
   fwrite (elementname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
-
   fwrite (&time, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
   g_mutex_unlock (&ctf_descriptor->mutex);
 }

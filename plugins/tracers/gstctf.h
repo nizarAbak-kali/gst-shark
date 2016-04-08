@@ -34,6 +34,7 @@ typedef enum
   SCHED_TIME_EVENT_ID,
 } event_id;
 
+gchar *get_ctf_path_name (void);
 gboolean gst_ctf_init (void);
 void gst_ctf_close (void);
 void add_metadata_event_struct (const gchar * metadata_event);
