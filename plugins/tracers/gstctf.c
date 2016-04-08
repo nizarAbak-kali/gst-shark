@@ -55,8 +55,6 @@ typealias integer { size = 8; align = 8; signed = false; } := uint8_t;\n\
 typealias integer { size = 16; align = 8; signed = false; } := uint16_t;\n\
 typealias integer { size = 32; align = 8; signed = false; } := uint32_t;\n\
 typealias integer { size = 64; align = 8; signed = false; } := uint64_t;\n\
-typealias integer { size = 5; align = 1; signed = false; } := uint5_t;\n\
-typealias integer { size = 27; align = 1; signed = false; } := uint27_t;\n\
 \n\
 trace {\n\
 	major = %u;\n\
