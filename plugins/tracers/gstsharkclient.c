@@ -5,6 +5,8 @@
 #include <string.h>
 
 
+#define SOCKET_PORT (1000)
+
 typedef struct
 {
     gchar * host_name;
@@ -33,6 +35,7 @@ static void trace_information_init()
 {
     trace_inf->dir_name = NULL;
     trace_inf->host_name = NULL;
+    trace_inf->port_number = SOCKET_PORT;
 }
 
 static void trace_information_finalize()
@@ -195,6 +198,13 @@ static void parse_option(gchar * option)
                     trace_inf->port_number = atoi(port_name);
                     line = line_end + 1;
                 }
+                /* if *line_end == ';' */
+				*line_end = '\0';
+
+				str_len = strlen(host_name);
+				trace_inf->host_name = g_malloc(str_len + 1);
+				strcpy(trace_inf->host_name,host_name);
+				line = line_end + 1;
                 break;
             default:
                 break;
