@@ -41,10 +41,15 @@ typedef enum
 
 struct _GstCtfDescriptor
 {
+  /* File variables */
   FILE *metadata;
   FILE *datastream;
+  /* TCP connection variables */
+  
+  
   GMutex mutex;
   GstClockTime start_time;
+  
   gchar *ctf_dir_name;
   gboolean ctf_output_disable;
 };
