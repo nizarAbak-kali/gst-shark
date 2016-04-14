@@ -190,10 +190,11 @@ static void parse_option(gchar * option)
                         end_of_line = TRUE;
                         break;
                     }
-                    end_of_line = TRUE;
+                    /* if *line_end == ';' */
+                    *line_end = '\0';
+                    trace_inf->port_number = atoi(port_name);
+                    line = line_end + 1;
                 }
-
-                end_of_line = TRUE;
                 break;
             default:
                 break;
@@ -229,7 +230,7 @@ int main (int argc, char * argv[])
         env_line = g_malloc(str_len + 1);
         
         strcpy(env_line,env_loc_value);
-        
+
         parse_option(env_line);
         
         g_free(env_line);
