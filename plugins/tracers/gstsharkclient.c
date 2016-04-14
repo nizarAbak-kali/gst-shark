@@ -5,7 +5,9 @@
 #include <string.h>
 
 
-#define SOCKET_PORT (1000)
+/* Default port */
+#define SOCKET_PORT     (1000)
+#define SOCKET_PROTOCOL G_SOCKET_PROTOCOL_TCP
 
 typedef struct
 {
@@ -212,7 +214,7 @@ static void parse_option(gchar * option)
     } while (FALSE == end_of_line);
 }
 
-//~ #define TCP_CONN
+#define TCP_CONN
 
 
 int main (int argc, char * argv[])
@@ -220,7 +222,7 @@ int main (int argc, char * argv[])
 #ifdef TCP_CONN
     GSocketClient * socket_client;
     GSocketConnection * socket_connection;
-    GInputStream * input_stream;
+    //~ GInputStream * input_stream;
     GOutputStream * output_stream;
     GError * error;
 #endif
@@ -256,38 +258,37 @@ int main (int argc, char * argv[])
     /* Creates a new GSocketClient with the default options. */
     socket_client = g_socket_client_new();
     
-    /* TODO: 
-     * void  g_socket_client_set_protocol (GSocketClient *client,
-     *                               GSocketProtocol protocol);
-     */
+    
+    g_socket_client_set_protocol (socket_client,SOCKET_PROTOCOL);
+    
     
     /* TODO: see g_socket_client_connect_to_host_async */
     /* Attempts to create a TCP connection to the named host. */
+    error = NULL;
     socket_connection = g_socket_client_connect_to_host (socket_client,
-                                               (gchar*)"localhost",
-                                                80, /* your port goes here */
+                                               trace_inf->host_name,
+                                                trace_inf->port_number, /* your port goes here */
                                                 NULL,
                                                 &error);
-    
-    input_stream = g_io_stream_get_input_stream (G_IO_STREAM (socket_connection));
-    output_stream = g_io_stream_get_output_stream (G_IO_STREAM (socket_connection));
-    g_output_stream_write  (output_stream,
-                          "Hello server!\n", /* your message goes here */
-                          14, /* length of your message */
-                          NULL,
-                          &error);
-                          
-        g_output_stream_write  (output_stream,
-                          "Hello server!\n", /* your message goes here */
-                          14, /* length of your message */
-                          NULL,
-                          &error);
-  
                                                 
     if (NULL == socket_connection)
     {
-        /*ERROR*/
+        return EXIT_SUCCESS;
     }
+    
+    //~ input_stream = g_io_stream_get_input_stream (G_IO_STREAM (socket_connection));
+    output_stream = g_io_stream_get_output_stream (G_IO_STREAM (socket_connection));
+    g_output_stream_write  (output_stream,
+                          "METADATA\n", /* your message goes here */
+                          9, /* length of your message */
+                          NULL,
+                          &error);
+                          
+    g_output_stream_write  (output_stream,
+                          "DATASTREAM\n", /* your message goes here */
+                          11, /* length of your message */
+                          NULL,
+                          &error);
     
     
     g_object_unref(socket_client);
