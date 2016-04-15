@@ -363,36 +363,6 @@ ctf_process_env_var()
 }
 
 
-#if 0
-static void
-set_ctf_path_name (GstCtfDescriptor * ctf)
-{
-  gchar dir_name[30];
-  gchar *env_dir_name;
-  gint size_env_path = 0;
-  time_t now = time (NULL);
-
-  g_return_if_fail (ctf);
-
-  if (G_UNLIKELY (g_getenv ("GST_SHARK_CTF_DISABLE") != NULL)) {
-    env_dir_name = (gchar *) g_getenv ("PWD");
-  } else {
-    env_dir_name = (gchar *) g_getenv ("GST_SHARK_LOCATION");
-  }
-
-  if (G_LIKELY (env_dir_name == NULL)) {
-    /* Creating the output folder for the CTF output files. */
-    strftime (dir_name, MAX_DIRNAME_LEN, "gstshark_%Y%m%d%H%M%S",
-        localtime (&now));
-    ctf->dir_name = g_malloc (MAX_DIRNAME_LEN + 1);
-    g_stpcpy (ctf->dir_name, dir_name);
-  } else {
-    size_env_path = strlen (env_dir_name);
-    ctf->dir_name = g_malloc (size_env_path + 1);
-    g_stpcpy (ctf->dir_name, env_dir_name);
-  }
-}
-#endif
 static void
 create_ctf_path (gchar * dir_name)
 {
@@ -444,33 +414,6 @@ void ctf_file_init()
     }
 }
 
-
-static GstCtfDescriptor *
-create_new_ctf (void)
-{
-  GstCtfDescriptor *ctf;
-  //~ gchar *metadata_file;
-  //~ gchar *datastream_file;
-
-  /* Allocating memory space for the private structure that will 
-     contains the file descriptors for the CTF ouput. */
-  ctf = g_malloc (sizeof (GstCtfDescriptor));
-
-  /* Composing the complete path of the output files. */
-  //~ set_ctf_path_name (ctf);
-  ctf_descriptor = ctf;
-  ctf_process_env_var();
-
-  //~ if (G_UNLIKELY (g_getenv ("GST_SHARK_CTF_DISABLE") != NULL)) {
-    //~ GST_WARNING ("Output CTF log is disabled, there will be no output files.");
-    //~ ctf->ctf_output_disable = TRUE;
-    //~ return ctf;
-  //~ }
-  ctf_file_init();
-
-  return ctf;
-}
-
 gboolean
 gst_ctf_init (void)
 {
@@ -486,7 +429,13 @@ gst_ctf_init (void)
 
   /* Since the descriptors structure does not exist it is needed to
      create and initialize a new one. */
-  ctf_descriptor = create_new_ctf ();
+  ctf_descriptor = g_malloc (sizeof (GstCtfDescriptor));
+  /* Load and proccess enviroment variables */
+  ctf_process_env_var();
+
+  ctf_file_init();
+  //~ ctf_tcp_init();
+
 
   if (!ctf_descriptor->ctf_output_disable) {
     generate_datastream_header (UUID, sizeof (UUID), 0);
