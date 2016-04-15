@@ -79,6 +79,18 @@ static void tcp_conn_init(void)
 
 #define TCP_CONN
 
+typedef enum {
+    FILE_PROTOCOL,
+    TCP_PROTOCOL,
+    MAX_PROTOCOL
+} protocol_type;
+
+
+const parser_handler_desc parser_handler_desc_list[] = 
+{
+    {"file://",NULL},
+    {"tcp://",NULL},
+};
 
 int main (int argc, char * argv[])
 {
@@ -90,6 +102,11 @@ int main (int argc, char * argv[])
     gint str_len;
     
     trace_information_init();
+    
+    parser_register_callbacks(
+        parser_handler_desc_list,
+        sizeof(parser_handler_desc_list)/sizeof(parser_handler_desc),
+        NULL);
     
     
     env_loc_value = g_getenv ("GST_SHARK_TRACE_LOC");
@@ -110,7 +127,7 @@ int main (int argc, char * argv[])
     g_printf("host: %s\n",trace_inf->host_name);
     g_printf("port: %d\n",trace_inf->port_number);
     g_printf("directory: %s\n",trace_inf->dir_name);
-    
+
     tcp_conn_init();
 #ifdef TCP_CONN
     if (TRUE == trace_inf->conn_output_disable)

@@ -24,6 +24,20 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
+
+typedef void (*parser_handler_function) (gchar * location);
+
+typedef struct {
+    const char* location;
+    parser_handler_function  parser_handler;
+} parser_handler_desc;
+
+void parser_register_callbacks(
+    const parser_handler_desc * parser_handler_desc_list,
+    guint list_len,
+    parser_handler_function no_match_handler);
+
+
 void parse_option(gchar * option);
 
 #endif /* __GST_PARSER_H__ */

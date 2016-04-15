@@ -31,6 +31,11 @@ typedef struct
 {
     gchar * next_location;
     gchar * line_end;
+    
+    const parser_handler_desc * parser_desc_list;
+    gint parser_desc_list_len;
+    parser_handler_function no_match_handler;
+    
 } parser_info;
 
 typedef enum {
@@ -160,6 +165,16 @@ void file_parser_handler(gchar * line)
     str_len = strlen(line);
     trace_inf->dir_name = g_malloc(str_len + 1);
     strcpy(trace_inf->dir_name,line);
+}
+
+void parser_register_callbacks(
+    const parser_handler_desc * parser_handler_desc_list,
+    guint list_len,
+    parser_handler_function no_match_handler)
+{
+    parser->parser_desc_list = parser_handler_desc_list;
+    parser->parser_desc_list_len = list_len;
+    parser->no_match_handler = no_match_handler;
 }
 
 
