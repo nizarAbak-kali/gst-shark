@@ -28,10 +28,15 @@
 #include <glib/gstdio.h>
 #include <glib/gprintf.h>
 #include <string.h>
+#include <stdlib.h> /* TODO: remove atoi */
 
 #include "gstctf.h"
+#include "gstparser.h"
 
 #define MAX_DIRNAME_LEN (30)
+
+static void file_parser_handler(gchar * line);
+static void tcp_parser_handler(gchar * line);
 
 typedef enum
 {
@@ -45,16 +50,24 @@ struct _GstCtfDescriptor
   FILE *metadata;
   FILE *datastream;
   /* TCP connection variables */
-  
+  gchar* host_name;
+  gint port_number;
   
   GMutex mutex;
   GstClockTime start_time;
   
-  gchar *ctf_dir_name;
+  gchar *dir_name;
+  gchar *env_dir_name;
   gboolean ctf_output_disable;
 };
 
 static GstCtfDescriptor *ctf_descriptor = NULL;
+
+static const parser_handler_desc parser_handler_desc_list[] = 
+{
+    {"file://",file_parser_handler},
+    {"tcp://",tcp_parser_handler},
+};
 
 /* Metadata format string */
 static const char metadata_fmt[] = "\
@@ -235,8 +248,120 @@ generate_metadata (gint major, gint minor, gchar * UUID, gint byte_order)
 gchar *
 get_ctf_path_name (void)
 {
-  return ctf_descriptor->ctf_dir_name;
+  return ctf_descriptor->dir_name;
 }
+
+static void tcp_parser_handler(gchar * line)
+{
+    gchar * line_end;
+    gchar * host_name;
+    gchar * port_name;
+    gsize str_len;
+
+    host_name = line;
+    line_end = line;
+    while (('\0' != *line_end) &&
+        (':' != *line_end))
+    {
+        ++line_end;
+    }
+
+    if (*line_end == '\0')
+    {
+        str_len = strlen(host_name);
+
+        ctf_descriptor->host_name = g_malloc(str_len + 1);
+
+        strcpy(ctf_descriptor->host_name,host_name);
+        /* End of the line, finish parser process */
+        return;
+    }
+    if (*line_end == ':')
+    {
+        /* Get the port value */
+        *line_end = '\0';
+
+        str_len = strlen(host_name);
+
+        ctf_descriptor->host_name = g_malloc(str_len + 1);
+
+        strcpy(ctf_descriptor->host_name,host_name);
+
+        ++line_end;
+        port_name = line_end;
+     
+        /* TODO: verify if is a numeric string */
+        ctf_descriptor->port_number = atoi(port_name);
+
+        return;
+
+    }
+}
+
+static void file_parser_handler(gchar * line)
+{
+    gsize  str_len;
+
+    str_len = strlen(line);
+    ctf_descriptor->env_dir_name = g_malloc(str_len + 1);
+    strcpy(ctf_descriptor->env_dir_name,line);
+}
+
+
+static void
+ctf_process_env_var()
+{
+  const gchar * env_loc_value;
+  gchar dir_name[30];
+  gchar *env_dir_name;
+  gchar * env_line;
+  gint size_env_path = 0;
+  gint str_len;
+  time_t now = time (NULL);
+  
+  env_loc_value = g_getenv ("GST_SHARK_TRACE_LOC");
+  
+  if (NULL != env_loc_value)
+  {
+      parser_register_callbacks(
+        parser_handler_desc_list,
+        sizeof(parser_handler_desc_list)/sizeof(parser_handler_desc),
+        NULL);
+        
+      str_len = strlen(env_loc_value);
+      
+      env_line = g_malloc(str_len + 1);
+      
+      strcpy(env_line,env_loc_value);
+  
+      parser_line(env_line);
+      
+      g_free(env_line);
+  }
+    
+  g_printf("host: %s:%d\n",ctf_descriptor->host_name,ctf_descriptor->port_number);
+  g_printf("directory: %s\n",ctf_descriptor->env_dir_name);
+
+  if (G_UNLIKELY (g_getenv ("GST_SHARK_CTF_DISABLE") != NULL)) {
+    env_dir_name = (gchar *) g_getenv ("PWD");
+  } else {
+    env_dir_name = ctf_descriptor->env_dir_name;
+  }
+
+  if (G_LIKELY (env_dir_name == NULL)) {
+    /* Creating the output folder for the CTF output files. */
+    strftime (dir_name, MAX_DIRNAME_LEN, "gstshark_%Y%m%d%H%M%S",
+        localtime (&now));
+    ctf_descriptor->dir_name = g_malloc (MAX_DIRNAME_LEN + 1);
+    g_stpcpy (ctf_descriptor->dir_name, dir_name);
+  } else {
+    size_env_path = strlen (env_dir_name);
+    ctf_descriptor->dir_name = g_malloc (size_env_path + 1);
+    g_stpcpy (ctf_descriptor->dir_name, env_dir_name);
+  }
+}
+
+
 
 static void
 set_ctf_path_name (GstCtfDescriptor * ctf)
@@ -258,29 +383,29 @@ set_ctf_path_name (GstCtfDescriptor * ctf)
     /* Creating the output folder for the CTF output files. */
     strftime (dir_name, MAX_DIRNAME_LEN, "gstshark_%Y%m%d%H%M%S",
         localtime (&now));
-    ctf->ctf_dir_name = g_malloc (MAX_DIRNAME_LEN + 1);
-    g_stpcpy (ctf->ctf_dir_name, dir_name);
+    ctf->dir_name = g_malloc (MAX_DIRNAME_LEN + 1);
+    g_stpcpy (ctf->dir_name, dir_name);
   } else {
     size_env_path = strlen (env_dir_name);
-    ctf->ctf_dir_name = g_malloc (size_env_path + 1);
-    g_stpcpy (ctf->ctf_dir_name, env_dir_name);
+    ctf->dir_name = g_malloc (size_env_path + 1);
+    g_stpcpy (ctf->dir_name, env_dir_name);
   }
 }
 
 static void
-create_ctf_path (gchar * ctf_dir_name)
+create_ctf_path (gchar * dir_name)
 {
-  g_return_if_fail (ctf_dir_name);
+  g_return_if_fail (dir_name);
 
-  if (!g_file_test (ctf_dir_name, G_FILE_TEST_EXISTS)) {
-    if (g_mkdir (ctf_dir_name, 0775) == 0) {
+  if (!g_file_test (dir_name, G_FILE_TEST_EXISTS)) {
+    if (g_mkdir (dir_name, 0775) == 0) {
       GST_INFO ("Directory %s did not exist and was created sucessfully.",
-          ctf_dir_name);
+          dir_name);
     } else {
-      GST_ERROR ("Directory %s could not be created.", ctf_dir_name);
+      GST_ERROR ("Directory %s could not be created.", dir_name);
     }
   } else {
-    GST_INFO ("Directory %s already exists in the current path.", ctf_dir_name);
+    GST_INFO ("Directory %s already exists in the current path.", dir_name);
   }
 }
 
@@ -296,7 +421,9 @@ create_new_ctf (void)
   ctf = g_malloc (sizeof (GstCtfDescriptor));
 
   /* Composing the complete path of the output files. */
-  set_ctf_path_name (ctf);
+  //~ set_ctf_path_name (ctf);
+  ctf_descriptor = ctf;
+  ctf_process_env_var();
 
   if (G_UNLIKELY (g_getenv ("GST_SHARK_CTF_DISABLE") != NULL)) {
     GST_WARNING ("Output CTF log is disabled, there will be no output files.");
@@ -305,12 +432,12 @@ create_new_ctf (void)
   }
 
   /* Creating the output folder for the CTF output files. */
-  create_ctf_path (ctf->ctf_dir_name);
+  create_ctf_path (ctf->dir_name);
 
   datastream_file =
-      g_strjoin (G_DIR_SEPARATOR_S, ctf->ctf_dir_name, "datastream", NULL);
+      g_strjoin (G_DIR_SEPARATOR_S, ctf->dir_name, "datastream", NULL);
   metadata_file =
-      g_strjoin (G_DIR_SEPARATOR_S, ctf->ctf_dir_name, "metadata", NULL);
+      g_strjoin (G_DIR_SEPARATOR_S, ctf->dir_name, "metadata", NULL);
 
   ctf->datastream = g_fopen (datastream_file, "w");
   if (ctf->datastream == NULL) {
@@ -365,7 +492,7 @@ gst_ctf_close (void)
   fclose (ctf_descriptor->metadata);
   fclose (ctf_descriptor->datastream);
   g_mutex_clear (&ctf_descriptor->mutex);
-  g_free (ctf_descriptor->ctf_dir_name);
+  g_free (ctf_descriptor->dir_name);
   g_free (ctf_descriptor);
 }
 

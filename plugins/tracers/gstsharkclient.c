@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "gstparser.h"
+#include "gstctf.h"
 #include "gstsharkclient.h"
 
 
@@ -10,14 +11,6 @@
 #define SOCKET_PORT     (1000)
 #define SOCKET_PROTOCOL G_SOCKET_PROTOCOL_TCP
 
-static void file_parser_handler(gchar * line);
-static void tcp_parser_handler(gchar * line);
-
-static const parser_handler_desc parser_handler_desc_list[] = 
-{
-    {"file://",file_parser_handler},
-    {"tcp://",tcp_parser_handler},
-};
 
 static trace_information trace_inf_struct;
 
@@ -78,63 +71,6 @@ static void tcp_conn_init(void)
     trace_inf->output_stream = output_stream;
 }
 
-static void tcp_parser_handler(gchar * line)
-{
-    gchar * line_end;
-    gchar * host_name;
-    gchar * port_name;
-    gsize str_len;
-
-    host_name = line;
-    line_end = line;
-    while (('\0' != *line_end) &&
-        (':' != *line_end))
-    {
-        ++line_end;
-    }
-
-    if (*line_end == '\0')
-    {
-        str_len = strlen(host_name);
-
-        trace_inf->host_name = g_malloc(str_len + 1);
-
-        strcpy(trace_inf->host_name,host_name);
-        /* End of the line, finish parser process */
-        return;
-    }
-    if (*line_end == ':')
-    {
-        /* Get the port value */
-        *line_end = '\0';
-
-        str_len = strlen(host_name);
-
-        trace_inf->host_name = g_malloc(str_len + 1);
-
-        strcpy(trace_inf->host_name,host_name);
-
-        ++line_end;
-        port_name = line_end;
-     
-        /* TODO: verify if is a numeric string */
-        trace_inf->port_number = atoi(port_name);
-
-        return;
-
-    }
-}
-
-static void file_parser_handler(gchar * line)
-{
-    gsize  str_len;
-
-    str_len = strlen(line);
-    trace_inf->dir_name = g_malloc(str_len + 1);
-    strcpy(trace_inf->dir_name,line);
-}
-
-
 #define TCP_CONN
 int main (int argc, char * argv[])
 {
@@ -145,13 +81,16 @@ int main (int argc, char * argv[])
     gchar * env_line;
     gint str_len;
     
+    //~ parser_register_callbacks(
+        //~ parser_handler_desc_list,
+        //~ sizeof(parser_handler_desc_list)/sizeof(parser_handler_desc),
+        //~ NULL);
+    
+    gst_ctf_init ();
+    
+    return 0;
+    
     trace_information_init();
-    
-    parser_register_callbacks(
-        parser_handler_desc_list,
-        sizeof(parser_handler_desc_list)/sizeof(parser_handler_desc),
-        NULL);
-    
     
     env_loc_value = g_getenv ("GST_SHARK_TRACE_LOC");
     
@@ -163,13 +102,12 @@ int main (int argc, char * argv[])
         
         strcpy(env_line,env_loc_value);
 
-        parse_option(env_line);
+        parser_line(env_line);
         
         g_free(env_line);
     }
     
-    g_printf("host: %s\n",trace_inf->host_name);
-    g_printf("port: %d\n",trace_inf->port_number);
+    g_printf("host: %s:%d\n",trace_inf->host_name,trace_inf->port_number);
     g_printf("directory: %s\n",trace_inf->dir_name);
 
     tcp_conn_init();

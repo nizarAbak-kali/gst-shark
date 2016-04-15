@@ -74,7 +74,7 @@ void parser_register_callbacks(
 }
 
 
-void parse_option(gchar * line)
+void parser_line(gchar * line)
 {
     gboolean cmp_res;
     gchar * line_end;

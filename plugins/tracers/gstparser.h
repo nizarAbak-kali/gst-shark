@@ -38,6 +38,6 @@ void parser_register_callbacks(
     parser_handler_function no_match_handler);
 
 
-void parse_option(gchar * option);
+void parser_line(gchar * option);
 
 #endif /* __GST_PARSER_H__ */
