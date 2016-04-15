@@ -77,6 +77,84 @@ static void tcp_conn_init(void)
     
 }
 
+static void file_parser_handler(gchar * line);
+static void tcp_parser_handler(gchar * line);
+
+static void tcp_parser_handler(gchar * line)
+{
+    gchar * line_end;
+    gchar * host_name;
+    gchar * port_name;
+    gsize str_len;
+
+    host_name = line;
+    line_end = line;
+    while (('\0' != *line_end) &&
+        (':' != *line_end))
+    {
+        ++line_end;
+    }
+
+    if (*line_end == '\0')
+    {
+        str_len = strlen(host_name);
+
+        trace_inf->host_name = g_malloc(str_len + 1);
+
+        strcpy(trace_inf->host_name,host_name);
+        /* End of the line, finish parser process */
+        return;
+    }
+    if (*line_end == ':')
+    {
+        /* Get the port value */
+        *line_end = '\0';
+
+        str_len = strlen(host_name);
+
+        trace_inf->host_name = g_malloc(str_len + 1);
+
+        strcpy(trace_inf->host_name,host_name);
+
+        ++line_end;
+        port_name = line_end;
+        //while ('\0' != *line_end)
+        //{
+            //++line_end;
+        //}
+
+        //if (*line_end == '\0')
+        //{
+            /* TODO: verify if is a numeric string */
+            trace_inf->port_number = atoi(port_name);
+            /* End of the line, finish parser process */
+            //~ end_of_line = TRUE;
+            return;
+        //}
+        /* if *line_end == ';' */
+        //*line_end = '\0';
+        //trace_inf->port_number = atoi(port_name);
+        //line = line_end + 1;
+    }
+    /* if *line_end == ';' */
+    //*line_end = '\0';
+
+    //str_len = strlen(host_name);
+    //trace_inf->host_name = g_malloc(str_len + 1);
+    //strcpy(trace_inf->host_name,host_name);
+    //line = line_end + 1;
+}
+
+static void file_parser_handler(gchar * line)
+{
+    gsize  str_len;
+
+    str_len = strlen(line);
+    trace_inf->dir_name = g_malloc(str_len + 1);
+    strcpy(trace_inf->dir_name,line);
+}
+
+
 #define TCP_CONN
 
 typedef enum {
@@ -88,8 +166,8 @@ typedef enum {
 
 const parser_handler_desc parser_handler_desc_list[] = 
 {
-    {"file://",NULL},
-    {"tcp://",NULL},
+    {"file://",file_parser_handler},
+    {"tcp://",tcp_parser_handler},
 };
 
 int main (int argc, char * argv[])
