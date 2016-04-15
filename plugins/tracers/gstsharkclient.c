@@ -127,7 +127,7 @@ int main (int argc, char * argv[])
     g_printf("host: %s\n",trace_inf->host_name);
     g_printf("port: %d\n",trace_inf->port_number);
     g_printf("directory: %s\n",trace_inf->dir_name);
-
+return 0;
     tcp_conn_init();
 #ifdef TCP_CONN
     if (TRUE == trace_inf->conn_output_disable)

@@ -48,10 +48,10 @@ typedef enum {
 parser_info parser_mem;
 parser_info * parser = &parser_mem;
 
-static gchar * protocol_list[] = {
-    [FILE_PROTOCOL] = "file://",
-    [TCP_PROTOCOL]  = "tcp://",
-};
+//~ static gchar * protocol_list[] = {
+    //~ [FILE_PROTOCOL] = "file://",
+    //~ [TCP_PROTOCOL]  = "tcp://",
+//~ };
 
 
 static gboolean parse_strcmp(const gchar * ref, gchar ** cmp_string)
@@ -74,24 +74,24 @@ static gboolean parse_strcmp(const gchar * ref, gchar ** cmp_string)
     return FALSE;
 }
 
-static gboolean parser_get_protocol(protocol_type * type, gchar ** line)
-{
-    gint protocol_type_idx;
-    gboolean cmp_res;
-    gchar* string = *line;
-
-    for (protocol_type_idx = 0; protocol_type_idx < MAX_PROTOCOL; ++protocol_type_idx)
-    {
-        cmp_res = parse_strcmp(protocol_list[protocol_type_idx],&string);
-        if (TRUE == cmp_res)
-        {
-            *line = string;
-            *type = protocol_type_idx;
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
+//~ static gboolean parser_get_protocol(protocol_type * type, gchar ** line)
+//~ {
+    //~ gint protocol_type_idx;
+    //~ gboolean cmp_res;
+    //~ gchar* string = *line;
+//~ 
+    //~ for (protocol_type_idx = 0; protocol_type_idx < MAX_PROTOCOL; ++protocol_type_idx)
+    //~ {
+        //~ cmp_res = parse_strcmp(protocol_list[protocol_type_idx],&string);
+        //~ if (TRUE == cmp_res)
+        //~ {
+            //~ *line = string;
+            //~ *type = protocol_type_idx;
+            //~ return TRUE;
+        //~ }
+    //~ }
+    //~ return FALSE;
+//~ }
 #if 1
 void tcp_parser_handler(gchar * line)
 {
@@ -181,11 +181,13 @@ void parser_register_callbacks(
 void parse_option(gchar * line)
 {
 
-    protocol_type type;
-    gboolean parser_prot_res;
+    //~ protocol_type type;
+    //~ gboolean parser_prot_res;
+    gboolean cmp_res;
     gchar * line_end;
     gchar * next_location;
     guint str_len;
+    guint list_idx;
     
     /* Compute the end of the line */
     str_len = strlen(line);
@@ -209,49 +211,39 @@ void parse_option(gchar * line)
         next_location = NULL;
     }
     
-    
-    do
+    do 
     {
-        parser_prot_res = parser_get_protocol(&type, &line);
-
-        if(FALSE == parser_prot_res)
+        for (list_idx = 0; list_idx < parser->parser_desc_list_len; ++list_idx)
         {
-            /* TODO */
-        }
+            cmp_res = parse_strcmp(parser->parser_desc_list[list_idx].location,&line);
+            if (TRUE == cmp_res)
+            {
+                if (list_idx == 0)
+                    file_parser_handler(line);
+                if (list_idx == 1)
+                    tcp_parser_handler(line);
 
-        switch (type)
-        {
-            case FILE_PROTOCOL:
-                file_parser_handler(line);
+                line = next_location;
 
-                break;
-            case TCP_PROTOCOL:
-                tcp_parser_handler(line);
-
-                break;
-            default:
-                break;
+                if (next_location == NULL)
+                {
+                    break;
+                }
+                while ((next_location != line_end) && (';' != *next_location))
+                {
+                    ++next_location;
+                }
+                if (';' == *next_location)
+                {
+                    *next_location = '\0';
+                    next_location++;
+                }
+                else
+                {
+                    next_location = NULL;
+                }
+            }
         }
-        line = next_location;
-
-        if (next_location == NULL)
-        {
-            break;
-        }
-
-        while ((next_location != line_end) && (';' != *next_location))
-        {
-            ++next_location;
-        }
-
-        if (';' == *next_location)
-        {
-            *next_location = '\0';
-            next_location++;
-        }
-        else
-        {
-            next_location = NULL;
-        }
-    } while (NULL == next_location);
+        /* TODO: if location is not defined */
+    } while (line != NULL);
 }
