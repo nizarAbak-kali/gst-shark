@@ -10,14 +10,18 @@
 #define SOCKET_PORT     (1000)
 #define SOCKET_PROTOCOL G_SOCKET_PROTOCOL_TCP
 
+static void file_parser_handler(gchar * line);
+static void tcp_parser_handler(gchar * line);
 
-
+static const parser_handler_desc parser_handler_desc_list[] = 
+{
+    {"file://",file_parser_handler},
+    {"tcp://",tcp_parser_handler},
+};
 
 static trace_information trace_inf_struct;
 
 trace_information * trace_inf = &trace_inf_struct;
-
-
 
 static void trace_information_init()
 {
@@ -72,13 +76,7 @@ static void tcp_conn_init(void)
     trace_inf->socket_client = socket_client;
     trace_inf->socket_connection = socket_connection;
     trace_inf->output_stream = output_stream;
-    
-    
-    
 }
-
-static void file_parser_handler(gchar * line);
-static void tcp_parser_handler(gchar * line);
 
 static void tcp_parser_handler(gchar * line)
 {
@@ -118,31 +116,13 @@ static void tcp_parser_handler(gchar * line)
 
         ++line_end;
         port_name = line_end;
-        //while ('\0' != *line_end)
-        //{
-            //++line_end;
-        //}
+     
+        /* TODO: verify if is a numeric string */
+        trace_inf->port_number = atoi(port_name);
 
-        //if (*line_end == '\0')
-        //{
-            /* TODO: verify if is a numeric string */
-            trace_inf->port_number = atoi(port_name);
-            /* End of the line, finish parser process */
-            //~ end_of_line = TRUE;
-            return;
-        //}
-        /* if *line_end == ';' */
-        //*line_end = '\0';
-        //trace_inf->port_number = atoi(port_name);
-        //line = line_end + 1;
+        return;
+
     }
-    /* if *line_end == ';' */
-    //*line_end = '\0';
-
-    //str_len = strlen(host_name);
-    //trace_inf->host_name = g_malloc(str_len + 1);
-    //strcpy(trace_inf->host_name,host_name);
-    //line = line_end + 1;
 }
 
 static void file_parser_handler(gchar * line)
@@ -156,20 +136,6 @@ static void file_parser_handler(gchar * line)
 
 
 #define TCP_CONN
-
-typedef enum {
-    FILE_PROTOCOL,
-    TCP_PROTOCOL,
-    MAX_PROTOCOL
-} protocol_type;
-
-
-const parser_handler_desc parser_handler_desc_list[] = 
-{
-    {"file://",file_parser_handler},
-    {"tcp://",tcp_parser_handler},
-};
-
 int main (int argc, char * argv[])
 {
 #ifdef TCP_CONN
@@ -205,7 +171,7 @@ int main (int argc, char * argv[])
     g_printf("host: %s\n",trace_inf->host_name);
     g_printf("port: %d\n",trace_inf->port_number);
     g_printf("directory: %s\n",trace_inf->dir_name);
-return 0;
+
     tcp_conn_init();
 #ifdef TCP_CONN
     if (TRUE == trace_inf->conn_output_disable)
@@ -223,9 +189,6 @@ return 0;
                           11, /* length of your message */
                           NULL,
                           &error);
-    
-    
-
 #endif
     trace_information_finalize();
     

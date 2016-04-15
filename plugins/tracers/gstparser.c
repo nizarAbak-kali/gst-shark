@@ -31,27 +31,16 @@ typedef struct
 {
     gchar * next_location;
     gchar * line_end;
-    
+
     const parser_handler_desc * parser_desc_list;
     gint parser_desc_list_len;
     parser_handler_function no_match_handler;
-    
-} parser_info;
 
-typedef enum {
-    FILE_PROTOCOL,
-    TCP_PROTOCOL,
-    MAX_PROTOCOL
-} protocol_type;
+} parser_info;
 
 
 parser_info parser_mem;
 parser_info * parser = &parser_mem;
-
-//~ static gchar * protocol_list[] = {
-    //~ [FILE_PROTOCOL] = "file://",
-    //~ [TCP_PROTOCOL]  = "tcp://",
-//~ };
 
 
 static gboolean parse_strcmp(const gchar * ref, gchar ** cmp_string)
@@ -74,25 +63,6 @@ static gboolean parse_strcmp(const gchar * ref, gchar ** cmp_string)
     return FALSE;
 }
 
-//~ static gboolean parser_get_protocol(protocol_type * type, gchar ** line)
-//~ {
-    //~ gint protocol_type_idx;
-    //~ gboolean cmp_res;
-    //~ gchar* string = *line;
-//~ 
-    //~ for (protocol_type_idx = 0; protocol_type_idx < MAX_PROTOCOL; ++protocol_type_idx)
-    //~ {
-        //~ cmp_res = parse_strcmp(protocol_list[protocol_type_idx],&string);
-        //~ if (TRUE == cmp_res)
-        //~ {
-            //~ *line = string;
-            //~ *type = protocol_type_idx;
-            //~ return TRUE;
-        //~ }
-    //~ }
-    //~ return FALSE;
-//~ }
-
 void parser_register_callbacks(
     const parser_handler_desc * parser_handler_desc_list,
     guint list_len,
@@ -106,18 +76,15 @@ void parser_register_callbacks(
 
 void parse_option(gchar * line)
 {
-
-    //~ protocol_type type;
-    //~ gboolean parser_prot_res;
     gboolean cmp_res;
     gchar * line_end;
     gchar * next_location;
     guint str_len;
     guint list_idx;
-    
+
     /* Compute the end of the line */
     str_len = strlen(line);
-    
+
     line_end = line + str_len;
 
     /* Search next location */
@@ -136,8 +103,8 @@ void parse_option(gchar * line)
     {
         next_location = NULL;
     }
-    
-    do 
+
+    do
     {
         for (list_idx = 0; list_idx < parser->parser_desc_list_len; ++list_idx)
         {
