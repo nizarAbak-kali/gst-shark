@@ -344,6 +344,7 @@ ctf_process_env_var()
 
   if (G_UNLIKELY (g_getenv ("GST_SHARK_CTF_DISABLE") != NULL)) {
     env_dir_name = (gchar *) g_getenv ("PWD");
+    ctf_descriptor->ctf_output_disable = TRUE;
   } else {
     env_dir_name = ctf_descriptor->env_dir_name;
   }
@@ -362,7 +363,7 @@ ctf_process_env_var()
 }
 
 
-
+#if 0
 static void
 set_ctf_path_name (GstCtfDescriptor * ctf)
 {
@@ -391,7 +392,7 @@ set_ctf_path_name (GstCtfDescriptor * ctf)
     g_stpcpy (ctf->dir_name, env_dir_name);
   }
 }
-
+#endif
 static void
 create_ctf_path (gchar * dir_name)
 {
@@ -409,12 +410,47 @@ create_ctf_path (gchar * dir_name)
   }
 }
 
+void ctf_file_init()
+{
+  gchar *metadata_file;
+  gchar *datastream_file;
+  
+    if ( TRUE != ctf_descriptor->ctf_output_disable)
+    {
+        /* Creating the output folder for the CTF output files. */
+        create_ctf_path (ctf_descriptor->dir_name);
+        
+        datastream_file =
+            g_strjoin (G_DIR_SEPARATOR_S, ctf_descriptor->dir_name, "datastream", NULL);
+        metadata_file =
+            g_strjoin (G_DIR_SEPARATOR_S, ctf_descriptor->dir_name, "metadata", NULL);
+        
+        ctf_descriptor->datastream = g_fopen (datastream_file, "w");
+        if (ctf_descriptor->datastream == NULL) {
+            GST_ERROR ("Could not open datastream file, path does not exist.");
+        }
+        
+        ctf_descriptor->metadata = g_fopen (metadata_file, "w");
+        if (ctf_descriptor->metadata == NULL) {
+            GST_ERROR ("Could not open metadata file, path does not exist.");
+        }
+        
+        g_mutex_init (&ctf_descriptor->mutex);
+        ctf_descriptor->start_time = gst_util_get_timestamp ();
+        ctf_descriptor->ctf_output_disable = FALSE;
+        
+        g_free (datastream_file);
+        g_free (metadata_file);
+    }
+}
+
+
 static GstCtfDescriptor *
 create_new_ctf (void)
 {
   GstCtfDescriptor *ctf;
-  gchar *metadata_file;
-  gchar *datastream_file;
+  //~ gchar *metadata_file;
+  //~ gchar *datastream_file;
 
   /* Allocating memory space for the private structure that will 
      contains the file descriptors for the CTF ouput. */
@@ -425,36 +461,12 @@ create_new_ctf (void)
   ctf_descriptor = ctf;
   ctf_process_env_var();
 
-  if (G_UNLIKELY (g_getenv ("GST_SHARK_CTF_DISABLE") != NULL)) {
-    GST_WARNING ("Output CTF log is disabled, there will be no output files.");
-    ctf->ctf_output_disable = TRUE;
-    return ctf;
-  }
-
-  /* Creating the output folder for the CTF output files. */
-  create_ctf_path (ctf->dir_name);
-
-  datastream_file =
-      g_strjoin (G_DIR_SEPARATOR_S, ctf->dir_name, "datastream", NULL);
-  metadata_file =
-      g_strjoin (G_DIR_SEPARATOR_S, ctf->dir_name, "metadata", NULL);
-
-  ctf->datastream = g_fopen (datastream_file, "w");
-  if (ctf->datastream == NULL) {
-    GST_ERROR ("Could not open datastream file, path does not exist.");
-  }
-
-  ctf->metadata = g_fopen (metadata_file, "w");
-  if (ctf->metadata == NULL) {
-    GST_ERROR ("Could not open metadata file, path does not exist.");
-  }
-
-  g_mutex_init (&ctf->mutex);
-  ctf->start_time = gst_util_get_timestamp ();
-  ctf->ctf_output_disable = FALSE;
-
-  g_free (datastream_file);
-  g_free (metadata_file);
+  //~ if (G_UNLIKELY (g_getenv ("GST_SHARK_CTF_DISABLE") != NULL)) {
+    //~ GST_WARNING ("Output CTF log is disabled, there will be no output files.");
+    //~ ctf->ctf_output_disable = TRUE;
+    //~ return ctf;
+  //~ }
+  ctf_file_init();
 
   return ctf;
 }
@@ -472,7 +484,7 @@ gst_ctf_init (void)
     return FALSE;
   }
 
-  /* Since the descriptors structure does not existit is needed to
+  /* Since the descriptors structure does not exist it is needed to
      create and initialize a new one. */
   ctf_descriptor = create_new_ctf ();
 
