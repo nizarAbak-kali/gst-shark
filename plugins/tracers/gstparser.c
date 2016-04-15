@@ -18,7 +18,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
- 
+
 #include <string.h>
 #include <stdlib.h>
 
@@ -27,24 +27,34 @@
 
 extern trace_information * trace_inf;
 
+typedef struct
+{
+    gchar * next_location;
+    gchar * line_end;
+} parser_info;
+
 typedef enum {
     FILE_PROTOCOL,
     TCP_PROTOCOL,
     MAX_PROTOCOL
 } protocol_type;
 
+
+parser_info parser_mem;
+parser_info * parser = &parser_mem;
+
 static gchar * protocol_list[] = {
     [FILE_PROTOCOL] = "file://",
     [TCP_PROTOCOL]  = "tcp://",
 };
- 
- 
+
+
 static gboolean parse_strcmp(const gchar * ref, gchar ** cmp_string)
 {
     gchar* string;
-    
+
     string = *cmp_string;
-    
+
     while (*ref == *string && '\0' != *ref)
     {
         ref++;
@@ -64,7 +74,7 @@ static gboolean parser_get_protocol(protocol_type * type, gchar ** line)
     gint protocol_type_idx;
     gboolean cmp_res;
     gchar* string = *line;
-    
+
     for (protocol_type_idx = 0; protocol_type_idx < MAX_PROTOCOL; ++protocol_type_idx)
     {
         cmp_res = parse_strcmp(protocol_list[protocol_type_idx],&string);
@@ -77,123 +87,118 @@ static gboolean parser_get_protocol(protocol_type * type, gchar ** line)
     }
     return FALSE;
 }
-#if 0
+#if 1
 void tcp_parser_handler(gchar * line)
 {
-    gchar * line = env;
     gchar * line_end;
     gchar * host_name;
     gchar * port_name;
-    
+    gsize str_len;
+
     host_name = line;
     line_end = line;
-    while (('\0' != *line_end) && 
-        (':' != *line_end) &&
-        (';' != *line_end))
+    while (('\0' != *line_end) &&
+        (':' != *line_end))
     {
         ++line_end;
     }
-    
+
     if (*line_end == '\0')
     {
         str_len = strlen(host_name);
-        
+
         trace_inf->host_name = g_malloc(str_len + 1);
-        
+
         strcpy(trace_inf->host_name,host_name);
         /* End of the line, finish parser process */
-        end_of_line = TRUE;
-        break;
+        return;
     }
     if (*line_end == ':')
     {
         /* Get the port value */
         *line_end = '\0';
-        
+
         str_len = strlen(host_name);
-        
+
         trace_inf->host_name = g_malloc(str_len + 1);
-        
+
         strcpy(trace_inf->host_name,host_name);
-        
+
         ++line_end;
         port_name = line_end;
-        while (('\0' != *line_end) && (';' != *line_end))
-        {
-            ++line_end;
-        }
-        
-        if (*line_end == '\0')
-        {
+        //while ('\0' != *line_end)
+        //{
+            //++line_end;
+        //}
+
+        //if (*line_end == '\0')
+        //{
             /* TODO: verify if is a numeric string */
             trace_inf->port_number = atoi(port_name);
             /* End of the line, finish parser process */
-            end_of_line = TRUE;
-            break;
-        }
+            //~ end_of_line = TRUE;
+            return;
+        //}
         /* if *line_end == ';' */
-        *line_end = '\0';
-        trace_inf->port_number = atoi(port_name);
-        line = line_end + 1;
+        //*line_end = '\0';
+        //trace_inf->port_number = atoi(port_name);
+        //line = line_end + 1;
     }
     /* if *line_end == ';' */
-    *line_end = '\0';
+    //*line_end = '\0';
 
-    str_len = strlen(host_name);
-    trace_inf->host_name = g_malloc(str_len + 1);
-    strcpy(trace_inf->host_name,host_name);
-    line = line_end + 1;
-}
-
-void file_parser_handler(gchar * line)
-{
-    dir_name = line;
-    line_end = line;
-    
-    while (('\0' != *line_end) && (';' != *line_end))
-    {
-        ++line_end;
-    }
-
-    if (*line_end == '\0')
-    {
-        str_len = strlen(dir_name);
-        
-        trace_inf->dir_name = g_malloc(str_len + 1);
-        
-        strcpy(trace_inf->dir_name,dir_name);
-        /* End of the line, finish parser process */
-        end_of_line = TRUE;
-        break;
-    }
-    *line_end = '\0';
-    str_len = strlen(dir_name);
-        
-    trace_inf->dir_name = g_malloc(str_len + 1);
-        
-    strcpy(trace_inf->dir_name,dir_name);
-    line = line_end + 1;
+    //str_len = strlen(host_name);
+    //trace_inf->host_name = g_malloc(str_len + 1);
+    //strcpy(trace_inf->host_name,host_name);
+    //line = line_end + 1;
 }
 #endif
+void file_parser_handler(gchar * line)
+{
+    gsize  str_len;
 
-void parse_option(gchar * option)
+    str_len = strlen(line);
+    trace_inf->dir_name = g_malloc(str_len + 1);
+    strcpy(trace_inf->dir_name,line);
+}
+
+
+void parse_option(gchar * line)
 {
 
     protocol_type type;
     gboolean parser_prot_res;
-    gchar * env = option;
-    gchar * line = env;
-    gchar * dir_name;
     gchar * line_end;
-    gchar * host_name;
-    gchar * port_name;
-    gboolean end_of_line = FALSE;
+    gchar * next_location;
     guint str_len;
+    
+    /* Compute the end of the line */
+    str_len = strlen(line);
+    
+    line_end = line + str_len;
+
+    /* Search next location */
+    next_location = line;
+    while ((next_location != line_end) && (';' != *next_location))
+    {
+        ++next_location;
+    }
+
+    if (';' == *next_location)
+    {
+        *next_location = '\0';
+        next_location++;
+    }
+    else
+    {
+        next_location = NULL;
+    }
+    
     
     do
     {
         parser_prot_res = parser_get_protocol(&type, &line);
-        
+
         if(FALSE == parser_prot_res)
         {
             /* TODO */
@@ -202,96 +207,36 @@ void parse_option(gchar * option)
         switch (type)
         {
             case FILE_PROTOCOL:
-                dir_name = line;
-                line_end = line;
-                
-                while (('\0' != *line_end) && (';' != *line_end))
-                {
-                    ++line_end;
-                }
+                file_parser_handler(line);
 
-                if (*line_end == '\0')
-                {
-                    str_len = strlen(dir_name);
-                    
-                    trace_inf->dir_name = g_malloc(str_len + 1);
-                    
-                    strcpy(trace_inf->dir_name,dir_name);
-                    /* End of the line, finish parser process */
-                    end_of_line = TRUE;
-                    break;
-                }
-                *line_end = '\0';
-                str_len = strlen(dir_name);
-                    
-                trace_inf->dir_name = g_malloc(str_len + 1);
-                    
-                strcpy(trace_inf->dir_name,dir_name);
-                line = line_end + 1;
-                
                 break;
             case TCP_PROTOCOL:
-                host_name = line;
-                line_end = line;
-                while (('\0' != *line_end) && 
-                    (':' != *line_end) &&
-                    (';' != *line_end))
-                {
-                    ++line_end;
-                }
-                
-                if (*line_end == '\0')
-                {
-                    str_len = strlen(host_name);
-                    
-                    trace_inf->host_name = g_malloc(str_len + 1);
-                    
-                    strcpy(trace_inf->host_name,host_name);
-                    /* End of the line, finish parser process */
-                    end_of_line = TRUE;
-                    break;
-                }
-                if (*line_end == ':')
-                {
-                    /* Get the port value */
-                    *line_end = '\0';
-                    
-                    str_len = strlen(host_name);
-                    
-                    trace_inf->host_name = g_malloc(str_len + 1);
-                    
-                    strcpy(trace_inf->host_name,host_name);
-                    
-                    ++line_end;
-                    port_name = line_end;
-                    while (('\0' != *line_end) && (';' != *line_end))
-                    {
-                        ++line_end;
-                    }
-                    
-                    if (*line_end == '\0')
-                    {
-                        /* TODO: verify if is a numeric string */
-                        trace_inf->port_number = atoi(port_name);
-                        /* End of the line, finish parser process */
-                        end_of_line = TRUE;
-                        break;
-                    }
-                    /* if *line_end == ';' */
-                    *line_end = '\0';
-                    trace_inf->port_number = atoi(port_name);
-                    line = line_end + 1;
-                }
-                /* if *line_end == ';' */
-				*line_end = '\0';
+                tcp_parser_handler(line);
 
-				str_len = strlen(host_name);
-				trace_inf->host_name = g_malloc(str_len + 1);
-				strcpy(trace_inf->host_name,host_name);
-				line = line_end + 1;
                 break;
             default:
                 break;
         }
-    } while (FALSE == end_of_line);
+        line = next_location;
+
+        if (next_location == NULL)
+        {
+            break;
+        }
+
+        while ((next_location != line_end) && (';' != *next_location))
+        {
+            ++next_location;
+        }
+
+        if (';' == *next_location)
+        {
+            *next_location = '\0';
+            next_location++;
+        }
+        else
+        {
+            next_location = NULL;
+        }
+    } while (NULL == next_location);
 }
