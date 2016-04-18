@@ -27,6 +27,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <glib/gprintf.h>
+#include <gio/gio.h>
 #include <string.h>
 #include <stdlib.h> /* TODO: remove atoi */
 
@@ -34,6 +35,10 @@
 #include "gstparser.h"
 
 #define MAX_DIRNAME_LEN (30)
+
+/* Default port */
+#define SOCKET_PORT     (1000)
+#define SOCKET_PROTOCOL G_SOCKET_PROTOCOL_TCP
 
 static void file_parser_handler(gchar * line);
 static void tcp_parser_handler(gchar * line);
@@ -46,19 +51,23 @@ typedef enum
 
 struct _GstCtfDescriptor
 {
+  GstClockTime start_time;
+  GMutex mutex;
   /* File variables */
   FILE *metadata;
   FILE *datastream;
+  gboolean ctf_output_disable;
+  gchar *dir_name;
+  gchar *env_dir_name;
+  
   /* TCP connection variables */
   gchar* host_name;
   gint port_number;
-  
-  GMutex mutex;
-  GstClockTime start_time;
-  
-  gchar *dir_name;
-  gchar *env_dir_name;
-  gboolean ctf_output_disable;
+  GSocketClient * socket_client;
+  GSocketConnection * socket_connection;
+  GOutputStream * output_stream;
+    
+  gboolean tcp_output_disable;
 };
 
 static GstCtfDescriptor *ctf_descriptor = NULL;
@@ -138,6 +147,41 @@ event {\n\
 	stream_id = 0;\n\
 };\n\
 ";
+
+
+GstCtfDescriptor * ctf_create_struct()
+{
+    GstCtfDescriptor * ctf;
+    
+    ctf = g_malloc (sizeof (GstCtfDescriptor));
+    if (NULL == ctf)
+    {
+        GST_ERROR ("CTF descriptor could not be created.");
+        return NULL;
+    }
+    
+    /* File variables */
+    ctf->dir_name = NULL;
+    ctf->env_dir_name = NULL;
+    /* Default state Enable */
+    ctf->ctf_output_disable = FALSE;
+  
+    ctf->metadata = NULL;
+    ctf->datastream = NULL;
+    
+    /* TCP connection variables */
+    ctf->host_name = NULL;
+    ctf->port_number = SOCKET_PORT;
+    
+    ctf->socket_client = NULL;
+    ctf->socket_connection = NULL;
+    ctf->output_stream = NULL;
+    
+    /* Default TCP connection state Enable */
+    ctf->tcp_output_disable = FALSE;
+    
+    return ctf;
+}
 
 static void
 generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
@@ -414,6 +458,42 @@ void ctf_file_init()
     }
 }
 
+static void ctf_tcp_init(void)
+{
+    GSocketClient * socket_client;
+    GSocketConnection * socket_connection;
+    GOutputStream * output_stream;
+    GError * error;
+    /* Creates a new GSocketClient with the default options. */
+    socket_client = g_socket_client_new();
+    
+    g_socket_client_set_protocol (socket_client,SOCKET_PROTOCOL);
+    
+    /* TODO: see g_socket_client_connect_to_host_async */
+    /* Attempts to create a TCP connection to the named host. */
+    error = NULL;
+    socket_connection = g_socket_client_connect_to_host (socket_client,
+                                               ctf_descriptor->host_name,
+                                               ctf_descriptor->port_number, /* your port goes here */
+                                               NULL,
+                                               &error);
+    /* Verify connection */
+    if (NULL == socket_connection)
+    {
+        g_object_unref(socket_client);
+        socket_client = NULL;
+        ctf_descriptor->tcp_output_disable = TRUE;
+        return;
+    }
+    
+    output_stream = g_io_stream_get_output_stream (G_IO_STREAM (socket_connection));
+    /* Store connection variables */
+    ctf_descriptor->socket_client = socket_client;
+    ctf_descriptor->socket_connection = socket_connection;
+    ctf_descriptor->output_stream = output_stream;
+}
+
+
 gboolean
 gst_ctf_init (void)
 {
@@ -429,12 +509,12 @@ gst_ctf_init (void)
 
   /* Since the descriptors structure does not exist it is needed to
      create and initialize a new one. */
-  ctf_descriptor = g_malloc (sizeof (GstCtfDescriptor));
+  ctf_descriptor = ctf_create_struct();
   /* Load and proccess enviroment variables */
   ctf_process_env_var();
 
   ctf_file_init();
-  //~ ctf_tcp_init();
+  ctf_tcp_init();
 
 
   if (!ctf_descriptor->ctf_output_disable) {
@@ -445,16 +525,6 @@ gst_ctf_init (void)
   }
 
   return TRUE;
-}
-
-void
-gst_ctf_close (void)
-{
-  fclose (ctf_descriptor->metadata);
-  fclose (ctf_descriptor->datastream);
-  g_mutex_clear (&ctf_descriptor->mutex);
-  g_free (ctf_descriptor->dir_name);
-  g_free (ctf_descriptor);
 }
 
 void
@@ -583,4 +653,51 @@ do_print_ctf_init (event_id id)
   fwrite (&unknown, sizeof (gchar), sizeof (guint32),
       ctf_descriptor->datastream);
   g_mutex_unlock (&ctf_descriptor->mutex);
+}
+
+void
+gst_ctf_close (void)
+{
+  fclose (ctf_descriptor->metadata);
+  fclose (ctf_descriptor->datastream);
+  g_mutex_clear (&ctf_descriptor->mutex);
+
+  if (NULL != ctf_descriptor->dir_name)
+  {
+      g_free(ctf_descriptor->dir_name);
+  }
+  if (NULL != ctf_descriptor->host_name)
+  {
+      g_free(ctf_descriptor->host_name);
+  }
+  if (NULL != ctf_descriptor->socket_client)
+  {
+    g_object_unref(ctf_descriptor->socket_client);
+  }
+  
+  g_free (ctf_descriptor);
+}
+
+
+/* Only for test */
+void tcp_conn_write(void)
+{
+    GError * error;
+    
+    if (TRUE == ctf_descriptor->tcp_output_disable )
+    {
+        return;
+    }
+
+    g_output_stream_write  (ctf_descriptor->output_stream,
+                          "METADATA\n", /* your message goes here */
+                          9, /* length of your message */
+                          NULL,
+                          &error);
+                          
+    g_output_stream_write  (ctf_descriptor->output_stream,
+                          "DATASTREAM\n", /* your message goes here */
+                          11, /* length of your message */
+                          NULL,
+                          &error);
 }
