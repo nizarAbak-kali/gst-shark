@@ -26,3 +26,11 @@ echo "TEST 5"
 sudo nc -l 1000 &
 sleep 1
 GST_SHARK_TRACE_LOC="tcp://localhost;file://./gst-shark4" ./gstsharkclient
+
+echo "TEST 6"
+# Test if there is not connection
+GST_SHARK_TRACE_LOC="tcp://localhost;file://./gst-shark5" ./gstsharkclient
+
+echo "TEST 7"
+# Test if there is not connection
+./gstsharkclient

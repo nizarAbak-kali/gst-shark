@@ -367,20 +367,20 @@ ctf_process_env_var()
   
   if (NULL != env_loc_value)
   {
-      parser_register_callbacks(
-        parser_handler_desc_list,
-        sizeof(parser_handler_desc_list)/sizeof(parser_handler_desc),
-        NULL);
-        
-      str_len = strlen(env_loc_value);
-      
-      env_line = g_malloc(str_len + 1);
-      
-      strcpy(env_line,env_loc_value);
+     parser_register_callbacks(
+       parser_handler_desc_list,
+       sizeof(parser_handler_desc_list)/sizeof(parser_handler_desc),
+       NULL);
+       
+     str_len = strlen(env_loc_value);
+     
+     env_line = g_malloc(str_len + 1);
+     
+     strcpy(env_line,env_loc_value);
   
-      parser_line(env_line);
-      
-      g_free(env_line);
+     parser_line(env_line);
+     
+     g_free(env_line);
   }
     
   g_printf("host: %s:%d\n",ctf_descriptor->host_name,ctf_descriptor->port_number);
@@ -464,6 +464,13 @@ static void ctf_tcp_init(void)
     GSocketConnection * socket_connection;
     GOutputStream * output_stream;
     GError * error;
+    /* Verify if the host name was given */
+    if (NULL == ctf_descriptor->host_name)
+    {
+        ctf_descriptor->tcp_output_disable = TRUE;
+        return;
+    }
+    
     /* Creates a new GSocketClient with the default options. */
     socket_client = g_socket_client_new();
     
