@@ -566,9 +566,8 @@ gst_ctf_init (void)
   ctf_tcp_init();
 
   if (!ctf_descriptor->file_output_disable) {
-    generate_datastream_header ();
     generate_metadata (1, 3, BYTE_ORDER_LE);
-
+    generate_datastream_header ();
     do_print_ctf_init (INIT_EVENT_ID);
   }
 
@@ -601,9 +600,6 @@ add_event_header (event_id id)
       GST_CLOCK_DIFF (ctf_descriptor->start_time, gst_util_get_timestamp ());
 
   mem = ctf_descriptor->mem;
-
-  if (ctf_descriptor->file_output_disable)
-    return;
 
   elapsed = elapsed / 1000;
   timestamp = elapsed;
@@ -717,15 +713,30 @@ do_print_scheduling_event (event_id id, gchar * elementname, guint64 time)
 void
 do_print_ctf_init (event_id id)
 {
+  GError * error;
   guint32 unknown = 0;
 
-  if (ctf_descriptor->file_output_disable)
-    return;
-
   g_mutex_lock (&ctf_descriptor->mutex);
+  
   add_event_header (id);
-  fwrite (&unknown, sizeof (gchar), sizeof (guint32),
+  
+  if (FALSE == ctf_descriptor->file_output_disable )
+  {
+    fwrite (&unknown, sizeof (gchar), sizeof (guint32),
       ctf_descriptor->datastream);
+  }
+      
+  if (FALSE == ctf_descriptor->tcp_output_disable )
+  {
+    g_output_stream_write  (ctf_descriptor->output_stream,
+                          &unknown,
+                          sizeof (guint32),
+                          NULL,
+                          &error);
+  }
+      
+      
+      
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
