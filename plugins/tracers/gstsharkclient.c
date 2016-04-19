@@ -13,7 +13,7 @@ int main (int argc, char * argv[])
     gst_ctf_init ();
 
 #ifdef TCP_CONN
-    tcp_conn_write();
+    //~ tcp_conn_write();
 #endif
     gst_ctf_close ();
 

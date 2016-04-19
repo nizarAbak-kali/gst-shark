@@ -39,6 +39,7 @@
 /* Default port */
 #define SOCKET_PORT     (1000)
 #define SOCKET_PROTOCOL G_SOCKET_PROTOCOL_TCP
+#define CTF_MEM_SIZE     (2024)
 
 static void file_parser_handler(gchar * line);
 static void tcp_parser_handler(gchar * line);
@@ -53,6 +54,10 @@ struct _GstCtfDescriptor
 {
   GstClockTime start_time;
   GMutex mutex;
+  /* This memory space would be used as auxiliar memory to build the stream 
+   * that will be written in the FILE or in the socket.
+   */
+  guint8 mem[CTF_MEM_SIZE];
   /* File variables */
   FILE *metadata;
   FILE *datastream;
@@ -194,7 +199,7 @@ generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
   /* The begin of the data stream header is compound by the Magic Number,
      the trace UUID and the Stream ID. These are all required fields. */
 
-  g_mutex_lock (&ctf_descriptor->mutex);
+
   /* Magic Number */
   fwrite (&Magic, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
 
@@ -277,15 +282,33 @@ uuid_to_uuidstring (gchar * uuid_string, gchar * uuid)
 static void
 generate_metadata (gint major, gint minor, gchar * UUID, gint byte_order)
 {
+    gint str_len;
+    GError * error;
   /* Writing the first sections of the metadata file with the structures 
      and the definitions that will be needed in the future. */
 
   gchar uuid_string[] = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX0";
   uuid_to_uuidstring (uuid_string, UUID);
 
+  str_len = g_snprintf((gchar*)ctf_descriptor->mem,CTF_MEM_SIZE ,metadata_fmt,major, minor, uuid_string, byte_order ? "le" : "be");
+  if (CTF_MEM_SIZE == str_len)
+  {
+    GST_ERROR ("Insufficient memory to create metadata");
+    return;
+  }
+  
   g_mutex_lock (&ctf_descriptor->mutex);
-  g_fprintf (ctf_descriptor->metadata, metadata_fmt, major, minor, uuid_string,
-      byte_order ? "le" : "be");
+  
+  fwrite (ctf_descriptor->mem, sizeof (gchar), str_len, ctf_descriptor->metadata);
+  
+  if (FALSE == ctf_descriptor->tcp_output_disable )
+  {
+    g_output_stream_write  (ctf_descriptor->output_stream,
+                          ctf_descriptor->mem, 
+                          str_len, 
+                          NULL,
+                          &error);
+  }
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
