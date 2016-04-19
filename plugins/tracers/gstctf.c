@@ -205,71 +205,43 @@ generate_datastream_header ()
   guint32 Magic = 0xC1FC1FC1;
   guint32 unknown;
   gint32 stream_id;
+  guint8 *mem;
   
   stream_id = 0;
-#if 0
-  guint8 *mem
-  
+
   /* Create Stream */
-  guint8 mem = ctf_descriptor->mem;
+  mem = ctf_descriptor->mem;
   
   g_mutex_lock (&ctf_descriptor->mutex);
+  /* The begin of the data stream header is compound by the Magic Number,
+     the trace UUID and the Stream ID. These are all required fields. */
   /* Magic Number */
   *(guint32*)mem = Magic;
   mem += sizeof(guint32);
   /* Trace UUID */
-  memcpy(mem,UUID,UUID_size);
-  mem += UUID_size;
+  memcpy(mem,ctf_descriptor->uuid,CTF_UUID_SIZE);
+  mem += CTF_UUID_SIZE;
   /* Stream ID */
   *(guint32*)mem = stream_id;
   mem += sizeof(guint32);
   
   /* Time Stamp begin */
+  time_stamp_begin = 0;
   *(guint64*)mem = time_stamp_begin;
   mem += sizeof(guint64);
   
   /* Time Stamp end */
+  time_stamp_end = 0;
   *(guint64*)mem = time_stamp_end;
   mem += sizeof(guint64);
   
   /* Padding needed */
+  unknown = 0x0000FFFF;
   *(guint32*)mem = unknown;
   mem += sizeof(guint32);
   
-  fwrite (ctf_descriptor->mem, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
+  fwrite (ctf_descriptor->mem, sizeof (gchar), CTF_UUID_SIZE + 4+8+8+4+4 , ctf_descriptor->datastream);
 
-  /* The begin of the data stream header is compound by the Magic Number,
-     the trace UUID and the Stream ID. These are all required fields. */
-#else
-
-  /* Magic Number */
-  fwrite (&Magic, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
-
-  /* Trace UUID */
-  fwrite (ctf_descriptor->uuid, sizeof (gchar), CTF_UUID_SIZE, ctf_descriptor->datastream);
-
-  /* Stream ID */
-  fwrite (&stream_id, sizeof (gchar), sizeof (guint32),
-      ctf_descriptor->datastream);
-
-  /* The following bytes correspond to the event packet context, these 
-     fields are optional. */
-
-  /* Time Stamp begin */
-  time_stamp_begin = 0;
-  fwrite (&time_stamp_begin, sizeof (gchar), sizeof (guint64),
-      ctf_descriptor->datastream);
-
-  /* Time Stamp end */
-  time_stamp_end = 0;
-  fwrite (&time_stamp_end, sizeof (gchar), sizeof (guint64),
-      ctf_descriptor->datastream);
-
-  /* Padding needed */
-  unknown = 0x0000FFFF;
-  fwrite (&unknown, sizeof (gchar), sizeof (guint32),
-      ctf_descriptor->datastream);
-#endif
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
