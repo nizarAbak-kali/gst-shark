@@ -39,7 +39,8 @@
 /* Default port */
 #define SOCKET_PORT     (1000)
 #define SOCKET_PROTOCOL G_SOCKET_PROTOCOL_TCP
-#define CTF_MEM_SIZE     (2024)
+#define CTF_MEM_SIZE      (2024)
+#define CTF_UUID_SIZE     (16)
 
 static void file_parser_handler(gchar * line);
 static void tcp_parser_handler(gchar * line);
@@ -54,6 +55,7 @@ struct _GstCtfDescriptor
 {
   GstClockTime start_time;
   GMutex mutex;
+  guint8 uuid[CTF_UUID_SIZE];
   /* This memory space would be used as auxiliar memory to build the stream 
    * that will be written in the FILE or in the socket.
    */
@@ -156,6 +158,10 @@ event {\n\
 
 GstCtfDescriptor * ctf_create_struct()
 {
+    gchar UUID[] =
+      { 0xd1, 0x8e, 0x63, 0x74, 0x35, 0xa1, 0xcd, 0x42, 0x8e, 0x70, 0xa9, 0xcf,
+    0xfa, 0x71, 0x27, 0x93
+    };
     GstCtfDescriptor * ctf;
     
     ctf = g_malloc (sizeof (GstCtfDescriptor));
@@ -185,26 +191,62 @@ GstCtfDescriptor * ctf_create_struct()
     /* Default TCP connection state Enable */
     ctf->tcp_output_disable = FALSE;
     
+    /* Currently a constant UUID value is used */
+    memcpy(ctf->uuid,UUID,CTF_UUID_SIZE);
+    
     return ctf;
 }
 
 static void
-generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
+generate_datastream_header ()
 {
   guint64 time_stamp_begin;
   guint64 time_stamp_end;
   guint32 Magic = 0xC1FC1FC1;
   guint32 unknown;
+  gint32 stream_id;
+  
+  stream_id = 0;
+#if 0
+  guint8 *mem
+  
+  /* Create Stream */
+  guint8 mem = ctf_descriptor->mem;
+  
+  g_mutex_lock (&ctf_descriptor->mutex);
+  /* Magic Number */
+  *(guint32*)mem = Magic;
+  mem += sizeof(guint32);
+  /* Trace UUID */
+  memcpy(mem,UUID,UUID_size);
+  mem += UUID_size;
+  /* Stream ID */
+  *(guint32*)mem = stream_id;
+  mem += sizeof(guint32);
+  
+  /* Time Stamp begin */
+  *(guint64*)mem = time_stamp_begin;
+  mem += sizeof(guint64);
+  
+  /* Time Stamp end */
+  *(guint64*)mem = time_stamp_end;
+  mem += sizeof(guint64);
+  
+  /* Padding needed */
+  *(guint32*)mem = unknown;
+  mem += sizeof(guint32);
+  
+  fwrite (ctf_descriptor->mem, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
 
   /* The begin of the data stream header is compound by the Magic Number,
      the trace UUID and the Stream ID. These are all required fields. */
-
+#else
 
   /* Magic Number */
   fwrite (&Magic, sizeof (gchar), sizeof (guint32), ctf_descriptor->datastream);
 
   /* Trace UUID */
-  fwrite (UUID, sizeof (gchar), UUID_size, ctf_descriptor->datastream);
+  fwrite (ctf_descriptor->uuid, sizeof (gchar), CTF_UUID_SIZE, ctf_descriptor->datastream);
 
   /* Stream ID */
   fwrite (&stream_id, sizeof (gchar), sizeof (guint32),
@@ -227,12 +269,12 @@ generate_datastream_header (gchar * UUID, gint UUID_size, guint32 stream_id)
   unknown = 0x0000FFFF;
   fwrite (&unknown, sizeof (gchar), sizeof (guint32),
       ctf_descriptor->datastream);
-
+#endif
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
 static void
-uuid_to_uuidstring (gchar * uuid_string, gchar * uuid)
+uuid_to_uuidstring (gchar * uuid_string, guint8 * uuid)
 {
   gchar *uuid_string_idx;
   gint32 byte;
@@ -280,7 +322,7 @@ uuid_to_uuidstring (gchar * uuid_string, gchar * uuid)
 }
 
 static void
-generate_metadata (gint major, gint minor, gchar * UUID, gint byte_order)
+generate_metadata (gint major, gint minor, gint byte_order)
 {
     gint str_len;
     GError * error;
@@ -288,7 +330,7 @@ generate_metadata (gint major, gint minor, gchar * UUID, gint byte_order)
      and the definitions that will be needed in the future. */
 
   gchar uuid_string[] = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX0";
-  uuid_to_uuidstring (uuid_string, UUID);
+  uuid_to_uuidstring (uuid_string, ctf_descriptor->uuid);
 
   str_len = g_snprintf((gchar*)ctf_descriptor->mem,CTF_MEM_SIZE ,metadata_fmt,major, minor, uuid_string, byte_order ? "le" : "be");
   if (CTF_MEM_SIZE == str_len)
@@ -523,15 +565,9 @@ static void ctf_tcp_init(void)
     ctf_descriptor->output_stream = output_stream;
 }
 
-
 gboolean
 gst_ctf_init (void)
 {
-  gchar UUID[] =
-      { 0xd1, 0x8e, 0x63, 0x74, 0x35, 0xa1, 0xcd, 0x42, 0x8e, 0x70, 0xa9, 0xcf,
-    0xfa, 0x71, 0x27, 0x93
-  };
-
   if (ctf_descriptor) {
     GST_ERROR ("CTF Descriptor already exists.");
     return FALSE;
@@ -546,10 +582,9 @@ gst_ctf_init (void)
   ctf_file_init();
   ctf_tcp_init();
 
-
   if (!ctf_descriptor->ctf_output_disable) {
-    generate_datastream_header (UUID, sizeof (UUID), 0);
-    generate_metadata (1, 3, UUID, BYTE_ORDER_LE);
+    generate_datastream_header ();
+    generate_metadata (1, 3, BYTE_ORDER_LE);
 
     do_print_ctf_init (INIT_EVENT_ID);
   }
