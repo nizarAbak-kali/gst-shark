@@ -577,14 +577,26 @@ gst_ctf_init (void)
 void
 add_metadata_event_struct (const gchar * metadata_event)
 {
+  gint data_size;
+  GError * error;
+    
   /* This function only writes the event structure to the metadata file, it
      depends entirely of what is passed as an argument. */
 
-  if (ctf_descriptor->file_output_disable)
-    return;
-
+  data_size = strlen(metadata_event);
   g_mutex_lock (&ctf_descriptor->mutex);
-  g_fprintf (ctf_descriptor->metadata, "%s", metadata_event);
+  if (FALSE == ctf_descriptor->file_output_disable )
+  {
+    g_fprintf (ctf_descriptor->metadata, "%s", metadata_event);
+  }
+  if (FALSE == ctf_descriptor->tcp_output_disable )
+  {
+    g_output_stream_write  (ctf_descriptor->output_stream,
+                          metadata_event,
+                          data_size,
+                          NULL,
+                          &error);
+  }
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
@@ -632,15 +644,47 @@ add_event_header (event_id id)
 void
 do_print_cpuusage_event (event_id id, guint32 cpunum, guint64 cpuload)
 {
+  guint8 * mem;
+  GError * error;
+  
+  mem = ctf_descriptor->mem;
+  
   if (ctf_descriptor->file_output_disable)
     return;
 
   g_mutex_lock (&ctf_descriptor->mutex);
   add_event_header (id);
-  fwrite (&cpunum, sizeof (gchar), sizeof (guint32),
+  
+#if 1
+  /* Write CPU number */
+  *(guint32*)mem = cpunum;
+  mem += sizeof(guint32);
+  /* Write CPU load */
+  *(guint64*)mem = cpuload;
+  mem += sizeof(guint64);
+  
+  if (FALSE == ctf_descriptor->file_output_disable )
+  {
+    fwrite (ctf_descriptor->mem, sizeof (gchar), 12,
+      ctf_descriptor->datastream);
+  }
+  
+  if (FALSE == ctf_descriptor->tcp_output_disable )
+  {
+    g_output_stream_write  (ctf_descriptor->output_stream,
+                          ctf_descriptor->mem,
+                          12,
+                          NULL,
+                          &error);
+  }
+  
+  
+#else
+  fwrite (&cpunum, sizeof (gchar), sizeof (cpunum),
       ctf_descriptor->datastream);
   fwrite (&cpuload, sizeof (gchar), sizeof (guint64),
       ctf_descriptor->datastream);
+#endif
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
@@ -734,9 +778,7 @@ do_print_ctf_init (event_id id)
                           NULL,
                           &error);
   }
-      
-      
-      
+
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
@@ -763,26 +805,3 @@ gst_ctf_close (void)
   g_free (ctf_descriptor);
 }
 
-
-/* Only for test */
-void tcp_conn_write(void)
-{
-    GError * error;
-
-    if (TRUE == ctf_descriptor->tcp_output_disable )
-    {
-        return;
-    }
-
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          "METADATA\n", /* your message goes here */
-                          9, /* length of your message */
-                          NULL,
-                          &error);
-
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          "DATASTREAM\n", /* your message goes here */
-                          11, /* length of your message */
-                          NULL,
-                          &error);
-}
