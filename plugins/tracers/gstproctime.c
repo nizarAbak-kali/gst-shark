@@ -42,8 +42,6 @@
 GST_DEBUG_CATEGORY_STATIC (gst_proctime_debug);
 #define GST_CAT_DEFAULT gst_proctime_debug
 
-G_LOCK_DEFINE (_proc);
-
 #define _do_init \
     GST_DEBUG_CATEGORY_INIT (gst_proctime_debug, "proctime", 0, "proctime tracer");
 #define gst_proctime_tracer_parent_class parent_class
@@ -67,8 +65,6 @@ do_push_buffer_pre (GstTracer * self, guint64 ts, GstPad * pad)
   GstProcTimeTracer *procTimeTracer;
   GstProcTime *procTime;
 
-  gchar *parentName;
-  gchar *peerParentName;
   GstElement *element;
   GstPad *padPeer;
   gchar *name;
@@ -80,14 +76,9 @@ do_push_buffer_pre (GstTracer * self, guint64 ts, GstPad * pad)
   timeString = procTimeTracer->timeString;
 
   element = gst_pad_get_parent_element (pad);
-  parentName = gst_element_get_name (element);
 
   padPeer = gst_pad_get_peer (pad);
   element = gst_pad_get_parent_element (padPeer);
-  peerParentName = gst_element_get_name (element);
-
-  g_free (parentName);
-  g_free (peerParentName);
 
   gst_proctime_proc_time (procTime, &time, &name, padPeer, pad);
   if (NULL != name) {
@@ -98,6 +89,9 @@ do_push_buffer_pre (GstTracer * self, guint64 ts, GstPad * pad)
 
     do_print_proctime_event (PROCTIME_EVENT_ID, name, time);
   }
+
+  gst_object_unref (element);
+  gst_object_unref (padPeer);
 }
 
 
