@@ -126,6 +126,12 @@ do_destroy_hashtable_value (gpointer data)
 }
 
 static void
+do_destroy_hashtable_key (gpointer data)
+{
+  gst_object_unref (data);
+}
+
+static void
 do_pad_push_buffer_pre (GstFramerateTracer * self, guint64 ts, GstPad * pad,
     GstBuffer * buffer)
 {
@@ -152,7 +158,6 @@ do_pad_push_buffer_pre (GstFramerateTracer * self, guint64 ts, GstPad * pad,
 
   /* Function contains on the Hash table returns TRUE if the key already exists */
   if (g_hash_table_contains (self->frame_counters, pad)) {
-
     /* If the pad that is pushing a buffer has already a space on the Hash table
        only the value should be updated */
     padframes =
@@ -161,6 +166,8 @@ do_pad_push_buffer_pre (GstFramerateTracer * self, guint64 ts, GstPad * pad,
   } else {
     GST_INFO_OBJECT (self, "The %s key was added to the Hash Table", fullname);
 
+    /* Ref pad to be used in the Hash table */
+    gst_object_ref (pad);
     /* Reserving memory space for every structure that is going to be stored as a 
        value in the Hash table */
     padframes = g_malloc (sizeof (GstFramerateHash));
@@ -226,8 +233,8 @@ gst_framerate_tracer_init (GstFramerateTracer * self)
   gchar *metadata_event;
 
   self->frame_counters =
-      g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL,
-      do_destroy_hashtable_value);
+      g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      do_destroy_hashtable_key, do_destroy_hashtable_value);
   self->start_timer = FALSE;
 
   gst_tracing_register_hook (tracer, "pad-push-pre",
