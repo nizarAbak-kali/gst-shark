@@ -26,7 +26,7 @@
 G_BEGIN_DECLS
 #define CPU_NUM_MAX  8
 /* Returns a reference to the array the contains the cpu usage computed */
-#define CPU_USAGE_ARRAY(cpuusage_struct)  (cpuusage_struct->cpu_usage)
+#define CPU_USAGE_ARRAY(cpuusage_struct)  (cpuusage_struct->cpu_load)
 /* Returns how many element contains the cpu_usage array
  * This value also represents the number of cpus in the system */
 #define CPU_USAGE_ARRAY_LENGTH(cpuusage_struct)  (cpuusage_struct->cpu_num)
@@ -47,9 +47,9 @@ G_BEGIN_DECLS
   gboolean cpu_array_sel;
 } GstCPUUsage;
 
-void gst_cpu_usage_init (GstCPUUsage * cpuusage);
+void gst_cpu_usage_init (GstCPUUsage * cpu_usage);
 
-void gst_cpu_usage_compute (GstCPUUsage * cpuusage);
+void gst_cpu_usage_compute (GstCPUUsage * cpu_usage);
 
 G_END_DECLS
 #endif //__GST_CPU_USAGE_COMPUTE_H__
