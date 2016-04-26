@@ -603,7 +603,6 @@ gst_ctf_init (void)
   ctf_file_init();
   ctf_tcp_init();
 
-
   generate_metadata (1, 3, BYTE_ORDER_LE);
   generate_datastream_header ();
   do_print_ctf_init (INIT_EVENT_ID);
@@ -615,23 +614,37 @@ gst_ctf_init (void)
 void
 add_metadata_event_struct (const gchar * metadata_event)
 {
-  gint data_size;
   GError * error;
+  gchar * payload;
+  gchar * payload_end;
+  guint payload_size;
+  guint8 * mem;
+  
+  mem = ctf_descriptor->mem;
+  payload = (gchar *)mem + TCP_HEADER_SIZE;
     
   /* This function only writes the event structure to the metadata file, it
      depends entirely of what is passed as an argument. */
-
-  data_size = strlen(metadata_event);
   g_mutex_lock (&ctf_descriptor->mutex);
+  
+  payload_end = g_stpcpy (payload,metadata_event);
+  
+  payload_size = payload_end - payload;
+  
   if (FALSE == ctf_descriptor->file_output_disable )
   {
-    g_fprintf (ctf_descriptor->metadata, "%s", metadata_event);
+    fwrite (payload, sizeof (gchar), payload_size, ctf_descriptor->metadata);
   }
   if (FALSE == ctf_descriptor->tcp_output_disable )
   {
+    /* Write the TCP header */
+    *(tcp_header_id*)mem = TCP_METADATA_ID;
+    mem += sizeof(tcp_header_id);
+    *(tcp_header_length*)mem = payload_size;
+    
     g_output_stream_write  (ctf_descriptor->output_stream,
-                          metadata_event,
-                          data_size,
+                          ctf_descriptor->mem,
+                          payload_size + TCP_HEADER_SIZE,
                           NULL,
                           &error);
   }
@@ -660,20 +673,6 @@ add_event_header (event_id id,guint8 * mem)
   *(guint32*)mem = timestamp;
   mem += sizeof(guint32);
 
-
-  //~ if (FALSE == ctf_descriptor->file_output_disable )
-  //~ {
-    //~ fwrite (ctf_descriptor->mem, sizeof (gchar), data_size, ctf_descriptor->datastream);
-  //~ }
-//~ 
-  //~ if (FALSE == ctf_descriptor->tcp_output_disable )
-  //~ {
-  //~ g_output_stream_write  (ctf_descriptor->output_stream,
-                          //~ ctf_descriptor->mem,
-                          //~ data_size,
-                          //~ NULL,
-                          //~ &error);
-  //~ }
   return data_size;
 }
 
