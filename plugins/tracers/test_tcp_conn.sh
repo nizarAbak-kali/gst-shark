@@ -23,7 +23,7 @@ diff -u ref_datastream.txt server_datastream.txt
 #~ ls -l ./gst-shark-server/
 #~ ls -l ./gst-shark-test
 
-#~ sudo echo "Test TCP"
-#~ babeltrace ./gst-shark-server
-#~ sudo echo "Test File"
-#~ babeltrace ./gst-shark-test
+sudo echo "Test TCP"
+babeltrace ./gst-shark-server
+sudo echo "Test File"
+babeltrace ./gst-shark-test

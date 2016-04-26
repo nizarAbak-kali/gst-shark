@@ -606,7 +606,7 @@ gst_ctf_init (void)
 
   generate_metadata (1, 3, BYTE_ORDER_LE);
   generate_datastream_header ();
-  //~ do_print_ctf_init (INIT_EVENT_ID);
+  do_print_ctf_init (INIT_EVENT_ID);
   
 
   return TRUE;
@@ -809,7 +809,7 @@ do_print_ctf_init (event_id id)
   event_header_size = add_event_header (id, payload);
   payload += event_header_size;
   
-  *(guint32*)mem = unknown;
+  *(guint32*)payload = unknown;
   //~ unknown += sizeof(guint32);
   payload_size = event_header_size + sizeof (unknown);
   
@@ -828,10 +828,10 @@ do_print_ctf_init (event_id id)
     mem += sizeof(tcp_header_id);
     *(tcp_header_length*)mem = payload_size;
     
-    mem = payload;
+
   
     g_output_stream_write  (ctf_descriptor->output_stream,
-                          mem,
+                          ctf_descriptor->mem,
                           payload_size + TCP_HEADER_SIZE,
                           NULL,
                           &error);
