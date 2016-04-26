@@ -4,8 +4,6 @@
 #include "gstctf.h"
 #include "gstsharkclient.h"
 
-#define TCP_CONN
-
 static const char cpuusage_metadata_event[] = "event {\n\
 	name = cpuusage;\n\
 	id = %d;\n\
@@ -31,9 +29,6 @@ int main (int argc, char * argv[])
     add_metadata_event_struct (metadata_event);
     g_free (metadata_event);
 
-#ifdef TCP_CONN
-    //~ tcp_conn_write();
-#endif
     /* Events */
     //~ do_print_cpuusage_event (CPUUSAGE_EVENT_ID, 0, 75);
 

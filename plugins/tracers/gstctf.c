@@ -227,7 +227,7 @@ generate_datastream_header ()
   mem = ctf_descriptor->mem;
   payload = mem + TCP_HEADER_SIZE;
 
-  g_mutex_lock (&ctf_descriptor->mutex);  
+  g_mutex_lock (&ctf_descriptor->mutex);
 
 
   /* The begin of the data stream header is compound by the Magic Number,
@@ -255,8 +255,6 @@ generate_datastream_header ()
   /* Padding needed */
   unknown = 0x0000FFFF;
   *(guint32*)payload = unknown;
-  //~ payload += sizeof(guint32);
-  
 
   if (FALSE == ctf_descriptor->file_output_disable)
   {
@@ -270,7 +268,7 @@ generate_datastream_header ()
     *(tcp_header_id*)mem = TCP_DATASTREAM_ID;
     mem += sizeof(tcp_header_id);
     *(tcp_header_length*)mem = payload_size;
-  
+
     g_output_stream_write  (ctf_descriptor->output_stream,
                           ctf_descriptor->mem,
                           payload_size + TCP_HEADER_SIZE,
@@ -336,7 +334,7 @@ generate_metadata (gint major, gint minor, gint byte_order)
     GError * error;
     guint8 * payload;
     guint8 * mem;
-    
+
     mem = ctf_descriptor->mem;
     payload = mem + TCP_HEADER_SIZE;
   /* Writing the first sections of the metadata file with the structures
@@ -344,16 +342,16 @@ generate_metadata (gint major, gint minor, gint byte_order)
 
   gchar uuid_string[] = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX0";
   uuid_to_uuidstring (uuid_string, ctf_descriptor->uuid);
-  
+
   g_mutex_lock (&ctf_descriptor->mutex);
-    
+
   str_len = g_snprintf((gchar*)payload,CTF_MEM_SIZE ,metadata_fmt,major, minor, uuid_string, byte_order ? "le" : "be");
   if (CTF_MEM_SIZE == str_len)
   {
     GST_ERROR ("Insufficient memory to create metadata");
     return;
   }
-  
+
   if (FALSE == ctf_descriptor->file_output_disable)
   {
       fwrite (payload, sizeof (gchar), str_len, ctf_descriptor->metadata);
@@ -365,7 +363,7 @@ generate_metadata (gint major, gint minor, gint byte_order)
     *(tcp_header_id*)mem = TCP_METADATA_ID;
     mem += sizeof(tcp_header_id);
     *(tcp_header_length*)mem = str_len;
-  
+
     g_output_stream_write  (ctf_descriptor->output_stream,
                           ctf_descriptor->mem,
                           str_len + TCP_HEADER_SIZE,
@@ -606,7 +604,7 @@ gst_ctf_init (void)
   generate_metadata (1, 3, BYTE_ORDER_LE);
   generate_datastream_header ();
   do_print_ctf_init (INIT_EVENT_ID);
-  
+
 
   return TRUE;
 }
@@ -619,18 +617,18 @@ add_metadata_event_struct (const gchar * metadata_event)
   gchar * payload_end;
   guint payload_size;
   guint8 * mem;
-  
+
   mem = ctf_descriptor->mem;
   payload = (gchar *)mem + TCP_HEADER_SIZE;
-    
+
   /* This function only writes the event structure to the metadata file, it
      depends entirely of what is passed as an argument. */
   g_mutex_lock (&ctf_descriptor->mutex);
-  
+
   payload_end = g_stpcpy (payload,metadata_event);
-  
+
   payload_size = payload_end - payload;
-  
+
   if (FALSE == ctf_descriptor->file_output_disable )
   {
     fwrite (payload, sizeof (gchar), payload_size, ctf_descriptor->metadata);
@@ -641,7 +639,7 @@ add_metadata_event_struct (const gchar * metadata_event)
     *(tcp_header_id*)mem = TCP_METADATA_ID;
     mem += sizeof(tcp_header_id);
     *(tcp_header_length*)mem = payload_size;
-    
+
     g_output_stream_write  (ctf_descriptor->output_stream,
                           ctf_descriptor->mem,
                           payload_size + TCP_HEADER_SIZE,
@@ -656,7 +654,7 @@ add_event_header (event_id id,guint8 * mem)
 {
   guint32 timestamp;
   guint data_size;
-  
+
   GstClockTime elapsed =
       GST_CLOCK_DIFF (ctf_descriptor->start_time, gst_util_get_timestamp ());
 
@@ -681,29 +679,28 @@ do_print_cpuusage_event (event_id id, guint32 cpunum, guint64 cpuload)
 {
   guint8 * mem;
   GError * error;
-  
+
   mem = ctf_descriptor->mem;
-  
+
   if (ctf_descriptor->file_output_disable)
     return;
 
   g_mutex_lock (&ctf_descriptor->mutex);
   //~ add_event_header (id);
-  
-#if 1
+
   /* Write CPU number */
   *(guint32*)mem = cpunum;
   mem += sizeof(guint32);
   /* Write CPU load */
   *(guint64*)mem = cpuload;
   mem += sizeof(guint64);
-  
+
   if (FALSE == ctf_descriptor->file_output_disable )
   {
     fwrite (ctf_descriptor->mem, sizeof (gchar), 12,
       ctf_descriptor->datastream);
   }
-  
+
   if (FALSE == ctf_descriptor->tcp_output_disable )
   {
     g_output_stream_write  (ctf_descriptor->output_stream,
@@ -712,14 +709,7 @@ do_print_cpuusage_event (event_id id, guint32 cpunum, guint64 cpuload)
                           NULL,
                           &error);
   }
-  
-  
-#else
-  fwrite (&cpunum, sizeof (gchar), sizeof (cpunum),
-      ctf_descriptor->datastream);
-  fwrite (&cpuload, sizeof (gchar), sizeof (guint64),
-      ctf_descriptor->datastream);
-#endif
+
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
@@ -799,36 +789,33 @@ do_print_ctf_init (event_id id)
   gsize payload_size;
   guint event_header_size;
 
-  mem = ctf_descriptor->mem;  
+  mem = ctf_descriptor->mem;
   payload = mem + TCP_HEADER_SIZE;
 
 
   g_mutex_lock (&ctf_descriptor->mutex);
-  
+
   event_header_size = add_event_header (id, payload);
   payload += event_header_size;
-  
+
   *(guint32*)payload = unknown;
-  //~ unknown += sizeof(guint32);
+
   payload_size = event_header_size + sizeof (unknown);
-  
-  
+
   if (FALSE == ctf_descriptor->file_output_disable )
   {
     payload = mem + TCP_HEADER_SIZE;
     fwrite (payload, sizeof (gchar), payload_size,
       ctf_descriptor->datastream);
   }
-      
+
   if (FALSE == ctf_descriptor->tcp_output_disable )
   {
     /* Write the TCP header */
     *(tcp_header_id*)mem = TCP_DATASTREAM_ID;
     mem += sizeof(tcp_header_id);
     *(tcp_header_length*)mem = payload_size;
-    
 
-  
     g_output_stream_write  (ctf_descriptor->output_stream,
                           ctf_descriptor->mem,
                           payload_size + TCP_HEADER_SIZE,

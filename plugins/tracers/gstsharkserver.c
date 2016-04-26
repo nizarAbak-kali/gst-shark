@@ -17,11 +17,8 @@ int main (int argc, char * argv[])
     FILE * fd;
     FILE * fd_metadata;
     FILE * fd_datastream;
-    //~ struct stat st;
     int size;
-    //~ int file_idx;
     char * file;
-    //~ int metadata_size;
     tcp_header_id header_id;
     int header_id_position;
     tcp_header_length header_length;
@@ -41,11 +38,8 @@ int main (int argc, char * argv[])
     
     fseek(fd, 0L, SEEK_END);
     size = ftell(fd);
-    //~ printf("size: %d\n",size);
     fseek(fd, 0L, SEEK_SET);
-    //stat(argv[1], &st);
-    //size = st.st_size;
-    printf("%d: file size %d\n",__LINE__,size);
+    //printf("%d: file size %d\n",__LINE__,size);
     
     file = malloc(size);
     if (NULL ==file)
@@ -65,19 +59,14 @@ int main (int argc, char * argv[])
     }
     
     file_read = 0;
-    while (file_read <= size)
+    while (file_read < size)
     {
         header_id = file[file_read];
-        printf("%d: file_read %d\n",__LINE__,file_read);
         header_id_position = file_read;
-        printf("%d: file_read %d\n",__LINE__,file_read);
         file_read += sizeof(header_id);
-        printf("%d: file_read %d\n",__LINE__,file_read);
         header_length = *((tcp_header_length*)(&file[file_read]));
-        printf("%d: file_read %d\n",__LINE__,file_read);
         file_read += sizeof(tcp_header_length) ;
-                printf("%d: file_read %d\n",__LINE__,file_read);
-        printf("header_id: 0x%X header_length %d\n",header_id, header_length);
+        //printf("header_id: 0x%X header_length %d\n",header_id, header_length);
         if (header_length < 0)
         {
             break;
@@ -94,40 +83,11 @@ int main (int argc, char * argv[])
                 fprintf(stderr,"ERROR: unknown TCP ID header [0x%X] at position %d\n",header_id,header_id_position);
                 return EXIT_SUCCESS;
         }
-        printf("%d: file_read %d\n",__LINE__,file_read);
         file_read += header_length;
-        printf("%d: file_read %d\n",__LINE__,file_read);
     }
     
     fclose(fd_metadata);
     fclose(fd_datastream);
-    //~ for (file_idx = 0; file_idx <= size; ++file_idx)
-    //~ {
-        //~ 
-        //~ printf("idx: %d %x\n",file_idx, (unsigned int)(0xFF &file[file_idx]));
-        //~ if ((unsigned int)0xC1 ==(unsigned int) (0xFF &file[file_idx]))
-        //~ {
-            //~ metadata_size = file_idx;
-            //~ printf("HIT idx: %d\n",file_idx);
-            //~ break;
-        //~ }
-    //~ } 
-    //~ 
-    //~ if (stat(DIR_NAME, &st) == -1)
-    //~ {
-        //~ mkdir(DIR_NAME, 0775);
-    //~ }
-    //~ 
-    //~ fd_metadata = fopen(DIR_NAME"/metadata","w");
-    //~ fd_datastream = fopen(DIR_NAME"/datastream","w");
-    //~ 
-    //~ if (NULL == fd_metadata || NULL == fd_datastream)
-    //~ {
-        //~ fprintf(stderr,"ERROR: metadata or datastream can not be opened\n");
-    //~ }
-    //~ 
-    //~ fwrite(file,sizeof(char),metadata_size,fd_metadata);
-    //~ fwrite(&file[metadata_size],sizeof(char),size-metadata_size,fd_datastream);
-//~ 
+   
     return EXIT_SUCCESS;
 }
