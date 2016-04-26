@@ -26,16 +26,16 @@ int main (int argc, char * argv[])
     gst_ctf_init ();
     
     
-      metadata_event =
-      g_strdup_printf (cpuusage_metadata_event, CPUUSAGE_EVENT_ID, 0);
-  add_metadata_event_struct (metadata_event);
-  g_free (metadata_event);
+      //~ metadata_event =
+      //~ g_strdup_printf (cpuusage_metadata_event, CPUUSAGE_EVENT_ID, 0);
+  //~ add_metadata_event_struct (metadata_event);
+  //~ g_free (metadata_event);
 
 #ifdef TCP_CONN
     //~ tcp_conn_write();
 #endif
     /* Events */
-    do_print_cpuusage_event (CPUUSAGE_EVENT_ID, 0, 75);
+    //~ do_print_cpuusage_event (CPUUSAGE_EVENT_ID, 0, 75);
 
     gst_ctf_close ();
 
