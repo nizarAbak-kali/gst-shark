@@ -45,6 +45,7 @@ int main (int argc, char * argv[])
     fseek(fd, 0L, SEEK_SET);
     //stat(argv[1], &st);
     //size = st.st_size;
+    printf("%d: file size %d\n",__LINE__,size);
     
     file = malloc(size);
     if (NULL ==file)
@@ -66,15 +67,16 @@ int main (int argc, char * argv[])
     file_read = 0;
     while (file_read <= size)
     {
-        printf("file_read %d\n",file_read);
         header_id = file[file_read];
-        printf("file_read %d\n",file_read);
+        printf("%d: file_read %d\n",__LINE__,file_read);
         header_id_position = file_read;
-        printf("header_id_position %d\n",header_id_position);
-        file_read = sizeof(header_id);
+        printf("%d: file_read %d\n",__LINE__,file_read);
+        file_read += sizeof(header_id);
+        printf("%d: file_read %d\n",__LINE__,file_read);
         header_length = *((tcp_header_length*)(&file[file_read]));
-        file_read =+ sizeof(tcp_header_length);
-        
+        printf("%d: file_read %d\n",__LINE__,file_read);
+        file_read += sizeof(tcp_header_length) ;
+                printf("%d: file_read %d\n",__LINE__,file_read);
         printf("header_id: 0x%X header_length %d\n",header_id, header_length);
         if (header_length < 0)
         {
@@ -92,8 +94,9 @@ int main (int argc, char * argv[])
                 fprintf(stderr,"ERROR: unknown TCP ID header [0x%X] at position %d\n",header_id,header_id_position);
                 return EXIT_SUCCESS;
         }
+        printf("%d: file_read %d\n",__LINE__,file_read);
         file_read += header_length;
-        printf("file_read %d\n",file_read);
+        printf("%d: file_read %d\n",__LINE__,file_read);
     }
     
     fclose(fd_metadata);

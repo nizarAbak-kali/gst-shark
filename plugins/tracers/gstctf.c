@@ -354,11 +354,6 @@ generate_metadata (gint major, gint minor, gint byte_order)
     return;
   }
   
-  /* Write the TCP header */
-  *(tcp_header_id*)mem = TCP_METADATA_ID;
-  mem += sizeof(tcp_header_id);
-  *(tcp_header_length*)mem = str_len;
-  
   if (FALSE == ctf_descriptor->file_output_disable)
   {
       fwrite (payload, sizeof (gchar), str_len, ctf_descriptor->metadata);
@@ -366,9 +361,14 @@ generate_metadata (gint major, gint minor, gint byte_order)
 
   if (FALSE == ctf_descriptor->tcp_output_disable )
   {
+    /* Write the TCP header */
+    *(tcp_header_id*)mem = TCP_METADATA_ID;
+    mem += sizeof(tcp_header_id);
+    *(tcp_header_length*)mem = str_len;
+  
     g_output_stream_write  (ctf_descriptor->output_stream,
                           ctf_descriptor->mem,
-                          str_len,
+                          str_len + TCP_HEADER_SIZE,
                           NULL,
                           &error);
   }
@@ -604,9 +604,9 @@ gst_ctf_init (void)
   ctf_tcp_init();
 
 
-    generate_metadata (1, 3, BYTE_ORDER_LE);
-    generate_datastream_header ();
-    do_print_ctf_init (INIT_EVENT_ID);
+  generate_metadata (1, 3, BYTE_ORDER_LE);
+  generate_datastream_header ();
+  //~ do_print_ctf_init (INIT_EVENT_ID);
   
 
   return TRUE;
