@@ -30,7 +30,7 @@ int main (int argc, char * argv[])
     g_free (metadata_event);
 
     /* Events */
-    //~ do_print_cpuusage_event (CPUUSAGE_EVENT_ID, 0, 75);
+    do_print_cpuusage_event (CPUUSAGE_EVENT_ID, 0, 75);
 
     gst_ctf_close ();
 
