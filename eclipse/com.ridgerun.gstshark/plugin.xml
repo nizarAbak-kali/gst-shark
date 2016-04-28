@@ -54,5 +54,11 @@
             name="gstsharkview"
             restorable="true">
       </view>
+      <view
+            class="com.ridgerun.gstshark.GstSharkFrameRate"
+            id="com.ridgerun.gstshark.view2"
+            name="gstsharkframerate"
+            restorable="true">
+      </view>
    </extension>
 </plugin>
