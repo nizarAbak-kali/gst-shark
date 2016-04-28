@@ -728,15 +728,57 @@ do_print_cpuusage_event (event_id id, guint32 cpunum, guint64 cpuload)
 void
 do_print_proctime_event (event_id id, gchar * elementname, guint64 time)
 {
-  gint size = strlen (elementname);
+  //~ gint size = strlen (elementname);
+  GError * error;
+  guint8 * mem;
+  guint8 * payload;
+  guint8 * payload_end;
+  gsize payload_size;
+  guint event_header_size;
 
-  if (ctf_descriptor->file_output_disable)
-    return;
+  mem = ctf_descriptor->mem;
+  payload = mem + TCP_HEADER_SIZE;
 
   g_mutex_lock (&ctf_descriptor->mutex);
+  
+  event_header_size = add_event_header (id, payload);
+  payload += event_header_size;
+  //~ payload_size = event_header_size;
+  
+  payload_end = (guint8 *)g_stpcpy ((gchar*)payload,elementname);
+  *(gchar*)payload_end = '\0';
+  ++payload_end;
+  payload += payload_end - payload;  
   //~ add_event_header (id);
-  fwrite (elementname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
-  fwrite (&time, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
+  //~ fwrite (elementname, sizeof (gchar), size + 1, ctf_descriptor->datastream);
+  
+  *(guint64*)payload = time;
+  payload += sizeof(guint64);
+  
+  payload_size = payload - (mem + TCP_HEADER_SIZE);
+  
+  if (FALSE == ctf_descriptor->file_output_disable )
+  {
+    payload -= payload_size;
+    fwrite (payload, sizeof (gchar), payload_size,
+      ctf_descriptor->datastream);
+  }
+  
+  if (FALSE == ctf_descriptor->tcp_output_disable )
+  {
+    /* Write the TCP header */
+    *(tcp_header_id*)mem = TCP_DATASTREAM_ID;
+    mem += sizeof(tcp_header_id);
+    *(tcp_header_length*)mem = payload_size;
+  
+    g_output_stream_write  (ctf_descriptor->output_stream,
+                          ctf_descriptor->mem,
+                          payload_size + TCP_HEADER_SIZE,
+                          NULL,
+                          &error);
+  }
+  
+  //~ fwrite (&time, sizeof (gchar), sizeof (guint64), ctf_descriptor->datastream);
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
