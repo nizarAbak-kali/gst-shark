@@ -27,7 +27,8 @@ public class GstSharkBaseViewer extends TmfCommonXLineChartViewer {
 		
 		do {
 			event = _trace.getNext(ctx);
-		} while (null == event || !event.getName().equals(name) || !event.getContent().getField("elementname").getValue().equals("fakesink0_sink"));
+	  } while (null == event || !event.getName().equals(name) || !event.getContent().getField("elementname").getValue().equals("fakesink0_sink"));
+	  //} while (null == event || !event.getName().equals(name) || !event.getContent().getField("elementname").getValue().equals("identity0_sink"));
 
 		return event;
 	}
@@ -87,7 +88,7 @@ public class GstSharkBaseViewer extends TmfCommonXLineChartViewer {
 
 		//clearContent();
 		setXAxis(xx);
-		setSeries("test1", y);
+		setSeries("fakesink0_sink", y);
 		updateDisplay();
 	}	
 
@@ -109,6 +110,6 @@ public class GstSharkBaseViewer extends TmfCommonXLineChartViewer {
 			}
 			event = _trace.getNext(context);
 		}
-		addSeries("test1");
+		//addSeries("test1");
     }
 }
