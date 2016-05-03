@@ -327,11 +327,36 @@ uuid_to_uuidstring (gchar * uuid_string, guint8 * uuid)
   *++uuid_string_idx = 0;
 }
 
+#ifdef STREAM_ASYNC_WRITE
+static void
+async_ready_callback (GObject *source_object,
+                        GAsyncResult *res,
+                        gpointer user_data)
+{
+  GError *error = NULL;
+  gssize bytes_written;
+
+    GST_ERROR("ERROR");
+  bytes_written = 
+  g_output_stream_write_finish (ctf_descriptor->output_stream,
+                              res,
+                              &error);
+                              
+  if (bytes_written <= 0) {
+    //~ g_warning (error->message);
+    GST_ERROR("ERROR");
+	return;
+  }
+}
+#endif
+
 static void
 generate_metadata (gint major, gint minor, gint byte_order)
 {
     gint str_len;
+#ifndef STREAM_ASYNC_WRITE
     GError * error;
+#endif
     guint8 * payload;
     guint8 * mem;
 
@@ -363,12 +388,21 @@ generate_metadata (gint major, gint minor, gint byte_order)
     *(tcp_header_id*)mem = TCP_METADATA_ID;
     mem += sizeof(tcp_header_id);
     *(tcp_header_length*)mem = str_len;
-
+#ifdef STREAM_ASYNC_WRITE
+    g_output_stream_write_async  (ctf_descriptor->output_stream,
+                          ctf_descriptor->mem,
+                          str_len + TCP_HEADER_SIZE,
+                          G_PRIORITY_DEFAULT,
+                          NULL,
+                          async_ready_callback,
+                          NULL);
+#else
     g_output_stream_write  (ctf_descriptor->output_stream,
                           ctf_descriptor->mem,
                           str_len + TCP_HEADER_SIZE,
                           NULL,
                           &error);
+#endif
   }
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
@@ -542,12 +576,27 @@ void ctf_file_init()
     }
 }
 
+//~ #define ASYNC_CONN
+
+#ifdef ASYNC_CONN
+static void
+async_ready_callback (GObject *source_object,
+                        GAsyncResult *res,
+                        gpointer user_data)
+{
+    
+}
+#endif
+
 static void ctf_tcp_init(void)
 {
     GSocketClient * socket_client;
-    GSocketConnection * socket_connection;
+    
     GOutputStream * output_stream;
+#ifndef ASYNC_CONN
+GSocketConnection * socket_connection;
     GError * error;
+#endif
     /* Verify if the host name was given */
     if (NULL == ctf_descriptor->host_name)
     {
@@ -562,12 +611,23 @@ static void ctf_tcp_init(void)
 
     /* TODO: see g_socket_client_connect_to_host_async */
     /* Attempts to create a TCP connection to the named host. */
+    
+#ifndef ASYNC_CONN
     error = NULL;
     socket_connection = g_socket_client_connect_to_host (socket_client,
                                                ctf_descriptor->host_name,
-                                               ctf_descriptor->port_number, /* your port goes here */
+                                               ctf_descriptor->port_number, 
                                                NULL,
                                                &error);
+#else
+    g_socket_client_connect_to_host_async (socket_client,
+                                               ctf_descriptor->host_name,
+                                               ctf_descriptor->port_number, 
+                                               NULL,
+                                               async_ready_callback,
+                                               NULL);
+
+#endif
     /* Verify connection */
     if (NULL == socket_connection)
     {
@@ -1000,6 +1060,8 @@ do_print_ctf_init (event_id id)
 void
 gst_ctf_close (void)
 {
+  GError * error;
+  gboolean res;
   fclose (ctf_descriptor->metadata);
   fclose (ctf_descriptor->datastream);
   g_mutex_clear (&ctf_descriptor->mutex);
@@ -1012,10 +1074,21 @@ gst_ctf_close (void)
   {
       g_free(ctf_descriptor->host_name);
   }
+  /* Closes the stream, releasing resources related to it. */
+  res = g_output_stream_close (ctf_descriptor->output_stream,
+                       NULL,
+                       &error);
+  if (FALSE == res)
+  {
+      GST_ERROR ("Failed to close output stream");
+  }
+  
   if (NULL != ctf_descriptor->socket_client)
   {
     g_object_unref(ctf_descriptor->socket_client);
   }
+  
+  
 
   g_free (ctf_descriptor);
 }

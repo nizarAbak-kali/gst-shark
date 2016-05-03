@@ -67,6 +67,8 @@ int main (int argc, char * argv[])
 {
     gchar *metadata_event;
     
+    gst_init (&argc, &argv);
+    
     gst_ctf_init ();
     
     
@@ -108,6 +110,8 @@ int main (int argc, char * argv[])
     do_print_scheduling_event (SCHED_TIME_EVENT_ID, "elementname", 1024);
 
     gst_ctf_close ();
+    
+    sleep(1);
 
     return EXIT_SUCCESS;
 }
