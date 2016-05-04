@@ -81,6 +81,7 @@ void parser_line(gchar * line)
     gchar * next_location;
     guint str_len;
     guint list_idx;
+    gboolean match;
 
     /* Compute the end of the line */
     str_len = strlen(line);
@@ -103,15 +104,19 @@ void parser_line(gchar * line)
     {
         next_location = NULL;
     }
-
+    
+    
     do
     {
+        match = FALSE;
         for (list_idx = 0; list_idx < parser->parser_desc_list_len; ++list_idx)
         {
             cmp_res = parse_strcmp(parser->parser_desc_list[list_idx].location,&line);
             if (TRUE == cmp_res)
             {
+                g_printf("HIT LINE %s\n",line);
                 parser->parser_desc_list[list_idx].parser_handler(line);
+                match = TRUE;
 
                 line = next_location;
 
@@ -134,6 +139,10 @@ void parser_line(gchar * line)
                 }
             }
         }
-        /* TODO: if location is not defined */
+        /* if location is not defined */
+        if (NULL != parser->no_match_handler && FALSE == match)
+        {
+            parser->no_match_handler(line);
+        }
     } while (line != NULL);
 }

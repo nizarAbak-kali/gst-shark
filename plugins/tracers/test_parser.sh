@@ -24,3 +24,8 @@ GST_SHARK_TRACE_LOC="tcp://localhost;file://./gst-shark5" ./gstparser
 echo "TEST 7"
 # Test if there is not destination directory
 ./gstparser
+
+
+echo "TEST 6"
+# Test if there is not connection
+GST_SHARK_TRACE_LOC="localhost;file://./gst-shark5" ./gstparser
