@@ -490,12 +490,17 @@ ctf_process_env_var (void)
   gchar *env_line;
   gint size_env_path = 0;
   gint str_len;
+  GstCTFParser *parser;
   time_t now = time (NULL);
 
   env_loc_value = g_getenv ("GST_SHARK_TRACE_LOC");
 
   if (NULL != env_loc_value) {
-    parser_register_callbacks (parser_handler_desc_list,
+
+    parser = parser_init ();
+
+    parser_register_callbacks (parser,
+        parser_handler_desc_list,
         sizeof (parser_handler_desc_list) / sizeof (parser_handler_desc),
         no_match_handler);
 
@@ -505,7 +510,9 @@ ctf_process_env_var (void)
 
     strcpy (env_line, env_loc_value);
 
-    parser_line (env_line);
+    parser_line (parser, env_line);
+
+    parser_finalize (parser);
 
     g_free (env_line);
   }
