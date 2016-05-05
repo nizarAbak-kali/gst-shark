@@ -145,7 +145,7 @@ main (int argc, char *argv[])
     g_free (env_line);
   }
 
-  g_printf ("host: %s:%d\n", ctf_descriptor->host_name,
+  g_printf ("host:      %s:%d\n", ctf_descriptor->host_name,
       ctf_descriptor->port_number);
   g_printf ("directory: %s\n", ctf_descriptor->env_dir_name);
 
