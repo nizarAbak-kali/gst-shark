@@ -66,6 +66,7 @@ parser_init (void)
 void
 parser_finalize (GstCTFParser * parser)
 {
+  g_return_if_fail (parser);
   g_free (parser);
 }
 
@@ -79,6 +80,10 @@ parser_register_callbacks (GstCTFParser * parser,
     const parser_handler_desc * parser_handler_desc_list,
     guint list_len, parser_handler_function no_match_handler)
 {
+  g_return_if_fail (parser);
+  g_return_if_fail (parser_handler_desc_list);
+  g_return_if_fail (no_match_handler);
+
   parser->parser_desc_list = parser_handler_desc_list;
   parser->parser_desc_list_len = list_len;
   parser->no_match_handler = no_match_handler;
@@ -95,6 +100,9 @@ parser_line (GstCTFParser * parser, gchar * line)
   guint str_len;
   guint list_idx;
   gboolean match;
+
+  g_return_if_fail (parser);
+  g_return_if_fail (line);
 
   /* Compute the end of the line */
   str_len = strlen (line);

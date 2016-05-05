@@ -96,16 +96,6 @@ file_parser_handler (gchar * line)
   strcpy (ctf_descriptor->env_dir_name, line);
 }
 
-static void
-no_match_handler (gchar * line)
-{
-  gsize str_len;
-
-  str_len = strlen (line);
-  ctf_descriptor->env_dir_name = g_malloc (str_len + 1);
-  strcpy (ctf_descriptor->env_dir_name, line);
-}
-
 
 static const parser_handler_desc parser_handler_desc_list[] = {
   {"file://", file_parser_handler},
@@ -130,7 +120,7 @@ main (int argc, char *argv[])
     parser_register_callbacks (parser,
         parser_handler_desc_list,
         sizeof (parser_handler_desc_list) / sizeof (parser_handler_desc),
-        no_match_handler);
+        file_parser_handler);
 
     str_len = strlen (env_loc_value);
 
