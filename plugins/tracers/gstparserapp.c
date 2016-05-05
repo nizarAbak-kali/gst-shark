@@ -84,7 +84,6 @@ static void tcp_parser_handler(gchar * line)
         ctf_descriptor->port_number = atoi(port_name);
 
         return;
-
     }
 }
 
@@ -99,14 +98,11 @@ static void file_parser_handler(gchar * line)
 
 static void no_match_handler(gchar * line)
 {
-    //~ gsize  str_len;
-//~ 
-    //~ str_len = strlen(line);
-    //~ ctf_descriptor->env_dir_name = g_malloc(str_len + 1);
- 
-    //~ strcpy(ctf_descriptor->env_dir_name,line);
-    
-    g_printf("LINE %s\n",line);
+    gsize  str_len;
+
+    str_len = strlen(line);
+    ctf_descriptor->env_dir_name = g_malloc(str_len + 1);
+    strcpy(ctf_descriptor->env_dir_name,line);
 }
 
 

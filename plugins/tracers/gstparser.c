@@ -114,7 +114,7 @@ void parser_line(gchar * line)
             cmp_res = parse_strcmp(parser->parser_desc_list[list_idx].location,&line);
             if (TRUE == cmp_res)
             {
-                g_printf("HIT LINE %s\n",line);
+                //~ g_printf("HIT LINE %s\n",line);
                 parser->parser_desc_list[list_idx].parser_handler(line);
                 match = TRUE;
 
@@ -143,6 +143,26 @@ void parser_line(gchar * line)
         if (NULL != parser->no_match_handler && FALSE == match)
         {
             parser->no_match_handler(line);
+            
+            line = next_location;
+
+            if (next_location == NULL)
+            {
+                break;
+            }
+            while ((next_location != line_end) && (';' != *next_location))
+            {
+                ++next_location;
+            }
+            if (';' == *next_location)
+            {
+                *next_location = '\0';
+                next_location++;
+            }
+            else
+            {
+                next_location = NULL;
+            }
         }
     } while (line != NULL);
 }
