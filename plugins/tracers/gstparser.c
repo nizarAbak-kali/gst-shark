@@ -105,7 +105,6 @@ void parser_line(gchar * line)
         next_location = NULL;
     }
     
-    
     do
     {
         match = FALSE;
@@ -114,7 +113,6 @@ void parser_line(gchar * line)
             cmp_res = parse_strcmp(parser->parser_desc_list[list_idx].location,&line);
             if (TRUE == cmp_res)
             {
-                //~ g_printf("HIT LINE %s\n",line);
                 parser->parser_desc_list[list_idx].parser_handler(line);
                 match = TRUE;
 

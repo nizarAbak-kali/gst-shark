@@ -436,6 +436,7 @@ static void tcp_parser_handler(gchar * line)
     gchar * line_end;
     gchar * host_name;
     gchar * port_name;
+    gchar * port_name_end;
     gsize str_len;
 
     host_name = line;
@@ -471,14 +472,23 @@ static void tcp_parser_handler(gchar * line)
         port_name = line_end;
 
         /* TODO: verify if is a numeric string */
-        ctf_descriptor->port_number = atoi(port_name);
+        ctf_descriptor->port_number = g_ascii_strtoull (port_name,
+                  &port_name_end,
+                  10);
 
         return;
-
     }
 }
-
 static void file_parser_handler(gchar * line)
+{
+    gsize  str_len;
+
+    str_len = strlen(line);
+    ctf_descriptor->env_dir_name = g_malloc(str_len + 1);
+    strcpy(ctf_descriptor->env_dir_name,line);
+}
+
+static void no_match_handler(gchar * line)
 {
     gsize  str_len;
 
@@ -506,7 +516,7 @@ ctf_process_env_var()
      parser_register_callbacks(
        parser_handler_desc_list,
        sizeof(parser_handler_desc_list)/sizeof(parser_handler_desc),
-       NULL);
+       no_match_handler);
 
      str_len = strlen(env_loc_value);
 
