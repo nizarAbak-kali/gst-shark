@@ -29,7 +29,7 @@
 #include <glib/gprintf.h>
 #include <gio/gio.h>
 #include <string.h>
-#include <stdlib.h> /* TODO: remove atoi */
+#include <stdlib.h>             /* TODO: remove atoi */
 
 #include "gstctf.h"
 #include "gstparser.h"
@@ -42,7 +42,7 @@
 #define CTF_MEM_SIZE      (2024)
 #define CTF_UUID_SIZE     (16)
 
-typedef guint8  tcp_header_id;
+typedef guint8 tcp_header_id;
 typedef guint32 tcp_header_length;
 
 #define TCP_HEADER_SIZE (sizeof(tcp_header_id) + sizeof(tcp_header_length))
@@ -83,8 +83,8 @@ typedef guint32 ctf_header_timestamp;
   /* Write timestamp */ \
   CTF_EVENT_WRITE_INT32(GST_CLOCK_DIFF (ctf_descriptor->start_time, gst_util_get_timestamp ())/1000,mem);
 
-static void file_parser_handler(gchar * line);
-static void tcp_parser_handler(gchar * line);
+static void file_parser_handler (gchar * line);
+static void tcp_parser_handler (gchar * line);
 
 typedef enum
 {
@@ -111,20 +111,19 @@ struct _GstCtfDescriptor
   gboolean file_output_disable;
 
   /* TCP connection variables */
-  gchar* host_name;
+  gchar *host_name;
   gint port_number;
-  GSocketClient * socket_client;
-  GSocketConnection * socket_connection;
-  GOutputStream * output_stream;
+  GSocketClient *socket_client;
+  GSocketConnection *socket_connection;
+  GOutputStream *output_stream;
   gboolean tcp_output_disable;
 };
 
 static GstCtfDescriptor *ctf_descriptor = NULL;
 
-static const parser_handler_desc parser_handler_desc_list[] =
-{
-    {"file://",file_parser_handler},
-    {"tcp://",tcp_parser_handler},
+static const parser_handler_desc parser_handler_desc_list[] = {
+  {"file://", file_parser_handler},
+  {"tcp://", tcp_parser_handler},
 };
 
 /* Metadata format string */
@@ -198,59 +197,59 @@ event {\n\
 ";
 
 
-GstCtfDescriptor * ctf_create_struct()
+static GstCtfDescriptor *
+ctf_create_struct (void)
 {
-    gchar UUID[] =
+  gchar UUID[] =
       { 0xd1, 0x8e, 0x63, 0x74, 0x35, 0xa1, 0xcd, 0x42, 0x8e, 0x70, 0xa9, 0xcf,
     0xfa, 0x71, 0x27, 0x93
-    };
-    GstCtfDescriptor * ctf;
+  };
+  GstCtfDescriptor *ctf;
 
-    ctf = g_malloc (sizeof (GstCtfDescriptor));
-    if (NULL == ctf)
-    {
-        GST_ERROR ("CTF descriptor could not be created.");
-        return NULL;
-    }
+  ctf = g_malloc (sizeof (GstCtfDescriptor));
+  if (NULL == ctf) {
+    GST_ERROR ("CTF descriptor could not be created.");
+    return NULL;
+  }
 
-    /* File variables */
-    ctf->dir_name = NULL;
-    ctf->env_dir_name = NULL;
-    /* Default state Enable */
-    ctf->file_output_disable = FALSE;
+  /* File variables */
+  ctf->dir_name = NULL;
+  ctf->env_dir_name = NULL;
+  /* Default state Enable */
+  ctf->file_output_disable = FALSE;
 
-    ctf->metadata = NULL;
-    ctf->datastream = NULL;
+  ctf->metadata = NULL;
+  ctf->datastream = NULL;
 
-    /* TCP connection variables */
-    ctf->host_name = NULL;
-    ctf->port_number = SOCKET_PORT;
+  /* TCP connection variables */
+  ctf->host_name = NULL;
+  ctf->port_number = SOCKET_PORT;
 
-    ctf->socket_client = NULL;
-    ctf->socket_connection = NULL;
-    ctf->output_stream = NULL;
+  ctf->socket_client = NULL;
+  ctf->socket_connection = NULL;
+  ctf->output_stream = NULL;
 
-    /* Default TCP connection state Enable */
-    ctf->tcp_output_disable = FALSE;
+  /* Default TCP connection state Enable */
+  ctf->tcp_output_disable = FALSE;
 
-    /* Currently a constant UUID value is used */
-    memcpy(ctf->uuid,UUID,CTF_UUID_SIZE);
+  /* Currently a constant UUID value is used */
+  memcpy (ctf->uuid, UUID, CTF_UUID_SIZE);
 
-    return ctf;
+  return ctf;
 }
 
 static void
-generate_datastream_header ()
+generate_datastream_header (void)
 {
   guint64 time_stamp_begin;
   guint64 time_stamp_end;
   guint32 magic = 0xC1FC1FC1;
   guint32 padding;
   gint32 stream_id;
-  guint8 * mem;
+  guint8 *mem;
   guint event_size;
-  guint8 * event_mem;
-  GError * error;
+  guint8 *event_mem;
+  GError *error;
 
   stream_id = 0;
 
@@ -263,38 +262,33 @@ generate_datastream_header ()
   /* The begin of the data stream header is compound by the Magic Number,
      the trace UUID and the Stream ID. These are all required fields. */
   /* Magic Number */
-  CTF_EVENT_WRITE_INT32(magic,event_mem);
+  CTF_EVENT_WRITE_INT32 (magic, event_mem);
   /* Trace UUID */
-  memcpy(event_mem,ctf_descriptor->uuid,CTF_UUID_SIZE);
+  memcpy (event_mem, ctf_descriptor->uuid, CTF_UUID_SIZE);
   event_mem += CTF_UUID_SIZE;
   /* Stream ID */
-  CTF_EVENT_WRITE_INT32(stream_id,event_mem);
+  CTF_EVENT_WRITE_INT32 (stream_id, event_mem);
   /* Time Stamp begin */
   time_stamp_begin = 0;
-  CTF_EVENT_WRITE_INT64(time_stamp_begin,event_mem);
+  CTF_EVENT_WRITE_INT64 (time_stamp_begin, event_mem);
   /* Time Stamp end */
   time_stamp_end = 0;
-  CTF_EVENT_WRITE_INT64(time_stamp_end,event_mem);
+  CTF_EVENT_WRITE_INT64 (time_stamp_end, event_mem);
   /* Padding needed */
   padding = 0x0000FFFF;
-  CTF_EVENT_WRITE_INT32(padding,event_mem);
+  CTF_EVENT_WRITE_INT32 (padding, event_mem);
 
-  if (FALSE == ctf_descriptor->file_output_disable)
-  {
+  if (FALSE == ctf_descriptor->file_output_disable) {
     event_mem = mem + TCP_HEADER_SIZE;
-    fwrite (event_mem, sizeof (gchar), event_size , ctf_descriptor->datastream);
+    fwrite (event_mem, sizeof (gchar), event_size, ctf_descriptor->datastream);
   }
 
-  if (FALSE == ctf_descriptor->tcp_output_disable )
-  {
+  if (FALSE == ctf_descriptor->tcp_output_disable) {
     /* Write the TCP header */
-    TCP_EVENT_HEADER_WRITE(TCP_DATASTREAM_ID,event_size,mem);
+    TCP_EVENT_HEADER_WRITE (TCP_DATASTREAM_ID, event_size, mem);
 
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          ctf_descriptor->mem,
-                          event_size + TCP_HEADER_SIZE,
-                          NULL,
-                          &error);
+    g_output_stream_write (ctf_descriptor->output_stream,
+        ctf_descriptor->mem, event_size + TCP_HEADER_SIZE, NULL, &error);
   }
 
   g_mutex_unlock (&ctf_descriptor->mutex);
@@ -350,21 +344,18 @@ uuid_to_uuidstring (gchar * uuid_string, guint8 * uuid)
 
 #ifdef STREAM_ASYNC_WRITE
 static void
-async_ready_callback (GObject *source_object,
-                        GAsyncResult *res,
-                        gpointer user_data)
+async_ready_callback (GObject * source_object,
+    GAsyncResult * res, gpointer user_data)
 {
   GError *error = NULL;
   gssize bytes_written;
 
-    GST_ERROR("ERROR");
+  GST_ERROR ("ERROR");
   bytes_written =
-  g_output_stream_write_finish (ctf_descriptor->output_stream,
-                              res,
-                              &error);
+      g_output_stream_write_finish (ctf_descriptor->output_stream, res, &error);
 
   if (bytes_written <= 0) {
-    GST_ERROR("ERROR");
+    GST_ERROR ("ERROR");
     return;
   }
 }
@@ -373,53 +364,46 @@ async_ready_callback (GObject *source_object,
 static void
 generate_metadata (gint major, gint minor, gint byte_order)
 {
-    gint str_len;
+  gint str_len;
 #ifndef STREAM_ASYNC_WRITE
-    GError * error;
+  GError *error;
 #endif
-    guint8 * event_mem;
-    guint8 * mem;
+  guint8 *event_mem;
+  guint8 *mem;
+  gchar uuid_string[] = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX0";
 
-    mem = ctf_descriptor->mem;
-    event_mem = mem + TCP_HEADER_SIZE;
+  mem = ctf_descriptor->mem;
+  event_mem = mem + TCP_HEADER_SIZE;
   /* Writing the first sections of the metadata file with the structures
      and the definitions that will be needed in the future. */
 
-  gchar uuid_string[] = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX0";
   uuid_to_uuidstring (uuid_string, ctf_descriptor->uuid);
 
   g_mutex_lock (&ctf_descriptor->mutex);
 
-  str_len = g_snprintf((gchar*)event_mem,CTF_MEM_SIZE ,metadata_fmt,major, minor, uuid_string, byte_order ? "le" : "be");
-  if (CTF_MEM_SIZE == str_len)
-  {
+  str_len =
+      g_snprintf ((gchar *) event_mem, CTF_MEM_SIZE, metadata_fmt, major, minor,
+      uuid_string, byte_order ? "le" : "be");
+  if (CTF_MEM_SIZE == str_len) {
     GST_ERROR ("Insufficient memory to create metadata");
     return;
   }
 
-  if (FALSE == ctf_descriptor->file_output_disable)
-  {
-      fwrite (event_mem, sizeof (gchar), str_len, ctf_descriptor->metadata);
+  if (FALSE == ctf_descriptor->file_output_disable) {
+    fwrite (event_mem, sizeof (gchar), str_len, ctf_descriptor->metadata);
   }
 
-  if (FALSE == ctf_descriptor->tcp_output_disable )
-  {
+  if (FALSE == ctf_descriptor->tcp_output_disable) {
     /* Write the TCP header */
-    TCP_EVENT_HEADER_WRITE(TCP_METADATA_ID,str_len,mem);
+    TCP_EVENT_HEADER_WRITE (TCP_METADATA_ID, str_len, mem);
 #ifdef STREAM_ASYNC_WRITE
-    g_output_stream_write_async  (ctf_descriptor->output_stream,
-                          ctf_descriptor->mem,
-                          str_len + TCP_HEADER_SIZE,
-                          G_PRIORITY_DEFAULT,
-                          NULL,
-                          async_ready_callback,
-                          NULL);
+    g_output_stream_write_async (ctf_descriptor->output_stream,
+        ctf_descriptor->mem,
+        str_len + TCP_HEADER_SIZE,
+        G_PRIORITY_DEFAULT, NULL, async_ready_callback, NULL);
 #else
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          ctf_descriptor->mem,
-                          str_len + TCP_HEADER_SIZE,
-                          NULL,
-                          &error);
+    g_output_stream_write (ctf_descriptor->output_stream,
+        ctf_descriptor->mem, str_len + TCP_HEADER_SIZE, NULL, &error);
 #endif
   }
   g_mutex_unlock (&ctf_descriptor->mutex);
@@ -431,106 +415,104 @@ get_ctf_path_name (void)
   return ctf_descriptor->dir_name;
 }
 
-static void tcp_parser_handler(gchar * line)
+static void
+tcp_parser_handler (gchar * line)
 {
-    gchar * line_end;
-    gchar * host_name;
-    gchar * port_name;
-    gchar * port_name_end;
-    gsize str_len;
+  gchar *line_end;
+  gchar *host_name;
+  gchar *port_name;
+  gchar *port_name_end;
+  gsize str_len;
 
-    host_name = line;
-    line_end = line;
-    while (('\0' != *line_end) &&
-        (':' != *line_end))
-    {
-        ++line_end;
-    }
+  host_name = line;
+  line_end = line;
+  while (('\0' != *line_end) && (':' != *line_end)) {
+    ++line_end;
+  }
 
-    if (*line_end == '\0')
-    {
-        str_len = strlen(host_name);
+  if (*line_end == '\0') {
+    str_len = strlen (host_name);
 
-        ctf_descriptor->host_name = g_malloc(str_len + 1);
+    ctf_descriptor->host_name = g_malloc (str_len + 1);
 
-        strcpy(ctf_descriptor->host_name,host_name);
-        /* End of the line, finish parser process */
-        return;
-    }
-    if (*line_end == ':')
-    {
-        /* Get the port value */
-        *line_end = '\0';
+    strcpy (ctf_descriptor->host_name, host_name);
+    /* End of the line, finish parser process */
+    return;
+  }
+  if (*line_end == ':') {
+    /* Get the port value */
+    *line_end = '\0';
 
-        str_len = strlen(host_name);
+    str_len = strlen (host_name);
 
-        ctf_descriptor->host_name = g_malloc(str_len + 1);
+    ctf_descriptor->host_name = g_malloc (str_len + 1);
 
-        strcpy(ctf_descriptor->host_name,host_name);
+    strcpy (ctf_descriptor->host_name, host_name);
 
-        ++line_end;
-        port_name = line_end;
+    ++line_end;
+    port_name = line_end;
 
-        /* TODO: verify if is a numeric string */
-        ctf_descriptor->port_number = g_ascii_strtoull (port_name,
-                  &port_name_end,
-                  10);
+    /* TODO: verify if is a numeric string */
+    ctf_descriptor->port_number = g_ascii_strtoull (port_name,
+        &port_name_end, 10);
 
-        return;
-    }
-}
-static void file_parser_handler(gchar * line)
-{
-    gsize  str_len;
-
-    str_len = strlen(line);
-    ctf_descriptor->env_dir_name = g_malloc(str_len + 1);
-    strcpy(ctf_descriptor->env_dir_name,line);
+    return;
+  }
 }
 
-static void no_match_handler(gchar * line)
+static void
+file_parser_handler (gchar * line)
 {
-    gsize  str_len;
+  gsize str_len;
 
-    str_len = strlen(line);
-    ctf_descriptor->env_dir_name = g_malloc(str_len + 1);
-    strcpy(ctf_descriptor->env_dir_name,line);
+  str_len = strlen (line);
+  ctf_descriptor->env_dir_name = g_malloc (str_len + 1);
+  strcpy (ctf_descriptor->env_dir_name, line);
+}
+
+static void
+no_match_handler (gchar * line)
+{
+  gsize str_len;
+
+  str_len = strlen (line);
+  ctf_descriptor->env_dir_name = g_malloc (str_len + 1);
+  strcpy (ctf_descriptor->env_dir_name, line);
 }
 
 
 static void
-ctf_process_env_var()
+ctf_process_env_var (void)
 {
-  const gchar * env_loc_value;
+  const gchar *env_loc_value;
   gchar dir_name[30];
   gchar *env_dir_name;
-  gchar * env_line;
+  gchar *env_line;
   gint size_env_path = 0;
   gint str_len;
   time_t now = time (NULL);
 
   env_loc_value = g_getenv ("GST_SHARK_TRACE_LOC");
 
-  if (NULL != env_loc_value)
-  {
-     parser_register_callbacks(
-       parser_handler_desc_list,
-       sizeof(parser_handler_desc_list)/sizeof(parser_handler_desc),
-       no_match_handler);
+  if (NULL != env_loc_value) {
+    parser_register_callbacks (parser_handler_desc_list,
+        sizeof (parser_handler_desc_list) / sizeof (parser_handler_desc),
+        no_match_handler);
 
-     str_len = strlen(env_loc_value);
+    str_len = strlen (env_loc_value);
 
-     env_line = g_malloc(str_len + 1);
+    env_line = g_malloc (str_len + 1);
 
-     strcpy(env_line,env_loc_value);
+    strcpy (env_line, env_loc_value);
 
-     parser_line(env_line);
+    parser_line (env_line);
 
-     g_free(env_line);
+    g_free (env_line);
   }
 
-  g_printf("host: %s:%d\n",ctf_descriptor->host_name,ctf_descriptor->port_number);
-  g_printf("directory: %s\n",ctf_descriptor->env_dir_name);
+  g_printf ("host: %s:%d\n", ctf_descriptor->host_name,
+      ctf_descriptor->port_number);
+  g_printf ("directory: %s\n", ctf_descriptor->env_dir_name);
 
   if (G_UNLIKELY (g_getenv ("GST_SHARK_CTF_DISABLE") != NULL)) {
     env_dir_name = (gchar *) g_getenv ("PWD");
@@ -570,106 +552,101 @@ create_ctf_path (gchar * dir_name)
   }
 }
 
-void ctf_file_init()
+static void
+ctf_file_init (void)
 {
   gchar *metadata_file;
   gchar *datastream_file;
 
-    if ( TRUE != ctf_descriptor->file_output_disable)
-    {
-        /* Creating the output folder for the CTF output files. */
-        create_ctf_path (ctf_descriptor->dir_name);
+  if (TRUE != ctf_descriptor->file_output_disable) {
+    /* Creating the output folder for the CTF output files. */
+    create_ctf_path (ctf_descriptor->dir_name);
 
-        datastream_file =
-            g_strjoin (G_DIR_SEPARATOR_S, ctf_descriptor->dir_name, "datastream", NULL);
-        metadata_file =
-            g_strjoin (G_DIR_SEPARATOR_S, ctf_descriptor->dir_name, "metadata", NULL);
+    datastream_file =
+        g_strjoin (G_DIR_SEPARATOR_S, ctf_descriptor->dir_name, "datastream",
+        NULL);
+    metadata_file =
+        g_strjoin (G_DIR_SEPARATOR_S, ctf_descriptor->dir_name, "metadata",
+        NULL);
 
-        ctf_descriptor->datastream = g_fopen (datastream_file, "w");
-        if (ctf_descriptor->datastream == NULL) {
-            GST_ERROR ("Could not open datastream file, path does not exist.");
-        }
-
-        ctf_descriptor->metadata = g_fopen (metadata_file, "w");
-        if (ctf_descriptor->metadata == NULL) {
-            GST_ERROR ("Could not open metadata file, path does not exist.");
-        }
-
-        g_mutex_init (&ctf_descriptor->mutex);
-        ctf_descriptor->start_time = gst_util_get_timestamp ();
-        ctf_descriptor->file_output_disable = FALSE;
-
-        g_free (datastream_file);
-        g_free (metadata_file);
+    ctf_descriptor->datastream = g_fopen (datastream_file, "w");
+    if (ctf_descriptor->datastream == NULL) {
+      GST_ERROR ("Could not open datastream file, path does not exist.");
     }
+
+    ctf_descriptor->metadata = g_fopen (metadata_file, "w");
+    if (ctf_descriptor->metadata == NULL) {
+      GST_ERROR ("Could not open metadata file, path does not exist.");
+    }
+
+    g_mutex_init (&ctf_descriptor->mutex);
+    ctf_descriptor->start_time = gst_util_get_timestamp ();
+    ctf_descriptor->file_output_disable = FALSE;
+
+    g_free (datastream_file);
+    g_free (metadata_file);
+  }
 }
 
 
 
 #ifdef ASYNC_CONN
 static void
-async_ready_callback (GObject *source_object,
-                        GAsyncResult *res,
-                        gpointer user_data)
+async_ready_callback (GObject * source_object,
+    GAsyncResult * res, gpointer user_data)
 {
 
 }
 #endif
 
-static void ctf_tcp_init(void)
+static void
+ctf_tcp_init (void)
 {
-    GSocketClient * socket_client;
+  GSocketClient *socket_client;
 
-    GOutputStream * output_stream;
+  GOutputStream *output_stream;
 #ifndef ASYNC_CONN
-GSocketConnection * socket_connection;
-    GError * error;
+  GSocketConnection *socket_connection;
+  GError *error;
 #endif
-    /* Verify if the host name was given */
-    if (NULL == ctf_descriptor->host_name)
-    {
-        ctf_descriptor->tcp_output_disable = TRUE;
-        return;
-    }
+  /* Verify if the host name was given */
+  if (NULL == ctf_descriptor->host_name) {
+    ctf_descriptor->tcp_output_disable = TRUE;
+    return;
+  }
 
-    /* Creates a new GSocketClient with the default options. */
-    socket_client = g_socket_client_new();
+  /* Creates a new GSocketClient with the default options. */
+  socket_client = g_socket_client_new ();
 
-    g_socket_client_set_protocol (socket_client,SOCKET_PROTOCOL);
+  g_socket_client_set_protocol (socket_client, SOCKET_PROTOCOL);
 
-    /* TODO: see g_socket_client_connect_to_host_async */
-    /* Attempts to create a TCP connection to the named host. */
+  /* TODO: see g_socket_client_connect_to_host_async */
+  /* Attempts to create a TCP connection to the named host. */
 
 #ifndef ASYNC_CONN
-    error = NULL;
-    socket_connection = g_socket_client_connect_to_host (socket_client,
-                                               ctf_descriptor->host_name,
-                                               ctf_descriptor->port_number,
-                                               NULL,
-                                               &error);
+  error = NULL;
+  socket_connection = g_socket_client_connect_to_host (socket_client,
+      ctf_descriptor->host_name, ctf_descriptor->port_number, NULL, &error);
 #else
-    g_socket_client_connect_to_host_async (socket_client,
-                                               ctf_descriptor->host_name,
-                                               ctf_descriptor->port_number,
-                                               NULL,
-                                               async_ready_callback,
-                                               NULL);
+  g_socket_client_connect_to_host_async (socket_client,
+      ctf_descriptor->host_name,
+      ctf_descriptor->port_number, NULL, async_ready_callback, NULL);
 
 #endif
-    /* Verify connection */
-    if (NULL == socket_connection)
-    {
-        g_object_unref(socket_client);
-        socket_client = NULL;
-        ctf_descriptor->tcp_output_disable = TRUE;
-        return;
-    }
+  /* Verify connection */
+  if (NULL == socket_connection) {
+    g_object_unref (socket_client);
+    socket_client = NULL;
+    ctf_descriptor->tcp_output_disable = TRUE;
+    return;
+  }
 
-    output_stream = g_io_stream_get_output_stream (G_IO_STREAM (socket_connection));
-    /* Store connection variables */
-    ctf_descriptor->socket_client = socket_client;
-    ctf_descriptor->socket_connection = socket_connection;
-    ctf_descriptor->output_stream = output_stream;
+  output_stream =
+      g_io_stream_get_output_stream (G_IO_STREAM (socket_connection));
+  /* Store connection variables */
+  ctf_descriptor->socket_client = socket_client;
+  ctf_descriptor->socket_connection = socket_connection;
+  ctf_descriptor->output_stream = output_stream;
 }
 
 gboolean
@@ -682,12 +659,12 @@ gst_ctf_init (void)
 
   /* Since the descriptors structure does not exist it is needed to
      create and initialize a new one. */
-  ctf_descriptor = ctf_create_struct();
+  ctf_descriptor = ctf_create_struct ();
   /* Load and proccess enviroment variables */
-  ctf_process_env_var();
+  ctf_process_env_var ();
 
-  ctf_file_init();
-  ctf_tcp_init();
+  ctf_file_init ();
+  ctf_tcp_init ();
 
   generate_metadata (1, 3, BYTE_ORDER_LE);
   generate_datastream_header ();
@@ -700,36 +677,31 @@ gst_ctf_init (void)
 void
 add_metadata_event_struct (const gchar * metadata_event)
 {
-  GError * error;
-  gchar * event_mem;
-  gchar * event_mem_end;
+  GError *error;
+  gchar *event_mem;
+  gchar *event_mem_end;
   guint event_size;
-  guint8 * mem;
+  guint8 *mem;
 
   mem = ctf_descriptor->mem;
-  event_mem = (gchar *)mem + TCP_HEADER_SIZE;
+  event_mem = (gchar *) mem + TCP_HEADER_SIZE;
 
   /* This function only writes the event structure to the metadata file, it
      depends entirely of what is passed as an argument. */
   g_mutex_lock (&ctf_descriptor->mutex);
 
-  event_mem_end = g_stpcpy (event_mem,metadata_event);
+  event_mem_end = g_stpcpy (event_mem, metadata_event);
   /* Computer event size */
   event_size = event_mem_end - event_mem;
 
-  if (FALSE == ctf_descriptor->file_output_disable )
-  {
+  if (FALSE == ctf_descriptor->file_output_disable) {
     fwrite (event_mem, sizeof (gchar), event_size, ctf_descriptor->metadata);
   }
-  if (FALSE == ctf_descriptor->tcp_output_disable )
-  {
-    TCP_EVENT_HEADER_WRITE(TCP_METADATA_ID,event_size,mem);
+  if (FALSE == ctf_descriptor->tcp_output_disable) {
+    TCP_EVENT_HEADER_WRITE (TCP_METADATA_ID, event_size, mem);
 
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          ctf_descriptor->mem,
-                          event_size + TCP_HEADER_SIZE,
-                          NULL,
-                          &error);
+    g_output_stream_write (ctf_descriptor->output_stream,
+        ctf_descriptor->mem, event_size + TCP_HEADER_SIZE, NULL, &error);
   }
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
@@ -738,9 +710,9 @@ add_metadata_event_struct (const gchar * metadata_event)
 void
 do_print_cpuusage_event (event_id id, guint32 cpunum, guint64 cpuload)
 {
-  GError * error;
-  guint8 * mem;
-  guint8 * event_mem;
+  GError *error;
+  guint8 *mem;
+  guint8 *event_mem;
   gsize event_size;
 
   mem = ctf_descriptor->mem;
@@ -749,31 +721,25 @@ do_print_cpuusage_event (event_id id, guint32 cpunum, guint64 cpuload)
   /* Lock mem, datastream and output_stream resources */
   g_mutex_lock (&ctf_descriptor->mutex);
   /* Add CTF header */
-  CTF_EVENT_WRITE_HEADER(id,event_mem);
+  CTF_EVENT_WRITE_HEADER (id, event_mem);
   /* Write CPU number */
-  CTF_EVENT_WRITE_INT32(cpunum,event_mem);
+  CTF_EVENT_WRITE_INT32 (cpunum, event_mem);
   /* Write CPU load */
-  CTF_EVENT_WRITE_INT64(cpuload,event_mem);
+  CTF_EVENT_WRITE_INT64 (cpuload, event_mem);
   /* Computer event size */
   event_size = event_mem - (mem + TCP_HEADER_SIZE);
 
-  if (FALSE == ctf_descriptor->file_output_disable )
-  {
+  if (FALSE == ctf_descriptor->file_output_disable) {
     event_mem = mem + TCP_HEADER_SIZE;
-    fwrite (event_mem, sizeof (gchar), event_size,
-      ctf_descriptor->datastream);
+    fwrite (event_mem, sizeof (gchar), event_size, ctf_descriptor->datastream);
   }
 
-  if (FALSE == ctf_descriptor->tcp_output_disable )
-  {
+  if (FALSE == ctf_descriptor->tcp_output_disable) {
     /* Write the TCP header */
-    TCP_EVENT_HEADER_WRITE(TCP_DATASTREAM_ID,event_size,mem);
+    TCP_EVENT_HEADER_WRITE (TCP_DATASTREAM_ID, event_size, mem);
 
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          ctf_descriptor->mem,
-                          event_size + TCP_HEADER_SIZE,
-                          NULL,
-                          &error);
+    g_output_stream_write (ctf_descriptor->output_stream,
+        ctf_descriptor->mem, event_size + TCP_HEADER_SIZE, NULL, &error);
   }
 
   g_mutex_unlock (&ctf_descriptor->mutex);
@@ -783,9 +749,9 @@ do_print_cpuusage_event (event_id id, guint32 cpunum, guint64 cpuload)
 void
 do_print_proctime_event (event_id id, gchar * elementname, guint64 time)
 {
-  GError * error;
-  guint8 * mem;
-  guint8 * event_mem;
+  GError *error;
+  guint8 *mem;
+  guint8 *event_mem;
   gsize event_size;
 
   mem = ctf_descriptor->mem;
@@ -794,31 +760,25 @@ do_print_proctime_event (event_id id, gchar * elementname, guint64 time)
   /* Lock mem and datastream and output_stream resources */
   g_mutex_lock (&ctf_descriptor->mutex);
   /* Add CTF header */
-  CTF_EVENT_WRITE_HEADER(id,event_mem);
+  CTF_EVENT_WRITE_HEADER (id, event_mem);
   /* Write element name */
-  CTF_EVENT_WRITE_STRING(elementname,event_mem);
+  CTF_EVENT_WRITE_STRING (elementname, event_mem);
   /* Write time */
-  CTF_EVENT_WRITE_INT64(time,event_mem)
-  /* Computer event size */
-  event_size = event_mem - (mem + TCP_HEADER_SIZE);
+  CTF_EVENT_WRITE_INT64 (time, event_mem)
+      /* Computer event size */
+      event_size = event_mem - (mem + TCP_HEADER_SIZE);
 
-  if (FALSE == ctf_descriptor->file_output_disable )
-  {
+  if (FALSE == ctf_descriptor->file_output_disable) {
     event_mem -= event_size;
-    fwrite (event_mem, sizeof (gchar), event_size,
-      ctf_descriptor->datastream);
+    fwrite (event_mem, sizeof (gchar), event_size, ctf_descriptor->datastream);
   }
 
-  if (FALSE == ctf_descriptor->tcp_output_disable )
-  {
+  if (FALSE == ctf_descriptor->tcp_output_disable) {
     /* Write the TCP header */
-    TCP_EVENT_HEADER_WRITE(TCP_DATASTREAM_ID,event_size,mem);
+    TCP_EVENT_HEADER_WRITE (TCP_DATASTREAM_ID, event_size, mem);
 
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          ctf_descriptor->mem,
-                          event_size + TCP_HEADER_SIZE,
-                          NULL,
-                          &error);
+    g_output_stream_write (ctf_descriptor->output_stream,
+        ctf_descriptor->mem, event_size + TCP_HEADER_SIZE, NULL, &error);
   }
 
   g_mutex_unlock (&ctf_descriptor->mutex);
@@ -827,9 +787,9 @@ do_print_proctime_event (event_id id, gchar * elementname, guint64 time)
 void
 do_print_framerate_event (event_id id, const gchar * padname, guint64 fps)
 {
-  GError * error;
-  guint8 * mem;
-  guint8 * event_mem;
+  GError *error;
+  guint8 *mem;
+  guint8 *event_mem;
   gsize event_size;
 
   mem = ctf_descriptor->mem;
@@ -838,44 +798,37 @@ do_print_framerate_event (event_id id, const gchar * padname, guint64 fps)
   /* Lock mem and datastream and output_stream resources */
   g_mutex_lock (&ctf_descriptor->mutex);
   /* Add CTF header */
-  CTF_EVENT_WRITE_HEADER(id,event_mem);
+  CTF_EVENT_WRITE_HEADER (id, event_mem);
   /* Write Pad name */
-  CTF_EVENT_WRITE_STRING(padname,event_mem);
+  CTF_EVENT_WRITE_STRING (padname, event_mem);
   /* Write FPS */
-  CTF_EVENT_WRITE_INT64(fps,event_mem)
-  /* Computer event size */
-  event_size = event_mem - (mem + TCP_HEADER_SIZE);
+  CTF_EVENT_WRITE_INT64 (fps, event_mem)
+      /* Computer event size */
+      event_size = event_mem - (mem + TCP_HEADER_SIZE);
 
-  if (FALSE == ctf_descriptor->file_output_disable )
-  {
+  if (FALSE == ctf_descriptor->file_output_disable) {
     event_mem = mem + TCP_HEADER_SIZE;
-    fwrite (event_mem, sizeof (gchar), event_size,
-      ctf_descriptor->datastream);
+    fwrite (event_mem, sizeof (gchar), event_size, ctf_descriptor->datastream);
   }
 
-  if (FALSE == ctf_descriptor->tcp_output_disable )
-  {
+  if (FALSE == ctf_descriptor->tcp_output_disable) {
     /* Write the TCP header */
-    TCP_EVENT_HEADER_WRITE(TCP_DATASTREAM_ID,event_size,mem);
+    TCP_EVENT_HEADER_WRITE (TCP_DATASTREAM_ID, event_size, mem);
 
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          ctf_descriptor->mem,
-                          event_size + TCP_HEADER_SIZE,
-                          NULL,
-                          &error);
+    g_output_stream_write (ctf_descriptor->output_stream,
+        ctf_descriptor->mem, event_size + TCP_HEADER_SIZE, NULL, &error);
   }
 
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
 
 void
-
 do_print_interlatency_event (event_id id,
     gchar * originpad, gchar * destinationpad, guint64 time)
 {
-  GError * error;
-  guint8 * mem;
-  guint8 * event_mem;
+  GError *error;
+  guint8 *mem;
+  guint8 *event_mem;
   gsize event_size;
 
   mem = ctf_descriptor->mem;
@@ -884,34 +837,28 @@ do_print_interlatency_event (event_id id,
   /* Lock mem and datastream and output_stream resources */
   g_mutex_lock (&ctf_descriptor->mutex);
   /* Add CTF header */
-  CTF_EVENT_WRITE_HEADER(id,event_mem);
+  CTF_EVENT_WRITE_HEADER (id, event_mem);
   /* Add event payload */
   /* Write origin pad name */
-  CTF_EVENT_WRITE_STRING(originpad,event_mem);
+  CTF_EVENT_WRITE_STRING (originpad, event_mem);
   /* Write destination pad name */
-  CTF_EVENT_WRITE_STRING(destinationpad,event_mem);
+  CTF_EVENT_WRITE_STRING (destinationpad, event_mem);
   /* Write time */
-  CTF_EVENT_WRITE_INT64(time,event_mem);
+  CTF_EVENT_WRITE_INT64 (time, event_mem);
   /* Computer event size */
   event_size = event_mem - (mem + TCP_HEADER_SIZE);
 
-  if (FALSE == ctf_descriptor->file_output_disable )
-  {
+  if (FALSE == ctf_descriptor->file_output_disable) {
     event_mem = mem + TCP_HEADER_SIZE;
-    fwrite (event_mem, sizeof (gchar), event_size,
-      ctf_descriptor->datastream);
+    fwrite (event_mem, sizeof (gchar), event_size, ctf_descriptor->datastream);
   }
 
-  if (FALSE == ctf_descriptor->tcp_output_disable )
-  {
+  if (FALSE == ctf_descriptor->tcp_output_disable) {
     /* Write the TCP header */
-    TCP_EVENT_HEADER_WRITE(TCP_DATASTREAM_ID,event_size,mem);
+    TCP_EVENT_HEADER_WRITE (TCP_DATASTREAM_ID, event_size, mem);
 
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          ctf_descriptor->mem,
-                          event_size + TCP_HEADER_SIZE,
-                          NULL,
-                          &error);
+    g_output_stream_write (ctf_descriptor->output_stream,
+        ctf_descriptor->mem, event_size + TCP_HEADER_SIZE, NULL, &error);
   }
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
@@ -919,9 +866,9 @@ do_print_interlatency_event (event_id id,
 void
 do_print_scheduling_event (event_id id, gchar * elementname, guint64 time)
 {
-  GError * error;
-  guint8 * mem;
-  guint8 * event_mem;
+  GError *error;
+  guint8 *mem;
+  guint8 *event_mem;
   gsize event_size;
 
   mem = ctf_descriptor->mem;
@@ -930,32 +877,26 @@ do_print_scheduling_event (event_id id, gchar * elementname, guint64 time)
   /* Lock mem and datastream and output_stream resources */
   g_mutex_lock (&ctf_descriptor->mutex);
   /* Add CTF header */
-  CTF_EVENT_WRITE_HEADER(id,event_mem);
+  CTF_EVENT_WRITE_HEADER (id, event_mem);
   /* Add event payload */
   /* Write element name */
-  CTF_EVENT_WRITE_STRING(elementname,event_mem)
-  /* Write time */
-  CTF_EVENT_WRITE_INT64(time,event_mem);
+  CTF_EVENT_WRITE_STRING (elementname, event_mem)
+      /* Write time */
+      CTF_EVENT_WRITE_INT64 (time, event_mem);
   /* Computer event size */
   event_size = event_mem - (mem + TCP_HEADER_SIZE);
 
-  if (FALSE == ctf_descriptor->file_output_disable )
-  {
+  if (FALSE == ctf_descriptor->file_output_disable) {
     event_mem = mem + TCP_HEADER_SIZE;
-    fwrite (event_mem, sizeof (gchar), event_size,
-      ctf_descriptor->datastream);
+    fwrite (event_mem, sizeof (gchar), event_size, ctf_descriptor->datastream);
   }
 
-  if (FALSE == ctf_descriptor->tcp_output_disable )
-  {
+  if (FALSE == ctf_descriptor->tcp_output_disable) {
     /* Write the TCP header */
-    TCP_EVENT_HEADER_WRITE(TCP_DATASTREAM_ID,event_size,mem);
+    TCP_EVENT_HEADER_WRITE (TCP_DATASTREAM_ID, event_size, mem);
 
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          ctf_descriptor->mem,
-                          event_size + TCP_HEADER_SIZE,
-                          NULL,
-                          &error);
+    g_output_stream_write (ctf_descriptor->output_stream,
+        ctf_descriptor->mem, event_size + TCP_HEADER_SIZE, NULL, &error);
   }
 
   g_mutex_unlock (&ctf_descriptor->mutex);
@@ -964,10 +905,10 @@ do_print_scheduling_event (event_id id, gchar * elementname, guint64 time)
 void
 do_print_ctf_init (event_id id)
 {
-  GError * error;
+  GError *error;
   guint32 unknown = 0;
-  guint8 * mem;
-  guint8 * event_mem;
+  guint8 *mem;
+  guint8 *event_mem;
   gsize event_size;
 
   mem = ctf_descriptor->mem;
@@ -976,30 +917,24 @@ do_print_ctf_init (event_id id)
   /* Lock mem and datastream and output_stream resources */
   g_mutex_lock (&ctf_descriptor->mutex);
   /* Add CTF header */
-  CTF_EVENT_WRITE_HEADER(id,event_mem);
+  CTF_EVENT_WRITE_HEADER (id, event_mem);
   /* Write padding */
-  CTF_EVENT_WRITE_INT32(unknown,event_mem);
+  CTF_EVENT_WRITE_INT32 (unknown, event_mem);
 
   /* Computer event size */
   event_size = event_mem - (mem + TCP_HEADER_SIZE);
 
-  if (FALSE == ctf_descriptor->file_output_disable )
-  {
+  if (FALSE == ctf_descriptor->file_output_disable) {
     event_mem = mem + TCP_HEADER_SIZE;
-    fwrite (event_mem, sizeof (gchar), event_size,
-      ctf_descriptor->datastream);
+    fwrite (event_mem, sizeof (gchar), event_size, ctf_descriptor->datastream);
   }
 
-  if (FALSE == ctf_descriptor->tcp_output_disable )
-  {
+  if (FALSE == ctf_descriptor->tcp_output_disable) {
     /* Write the TCP header */
-    TCP_EVENT_HEADER_WRITE(TCP_DATASTREAM_ID,event_size,mem);
+    TCP_EVENT_HEADER_WRITE (TCP_DATASTREAM_ID, event_size, mem);
 
-    g_output_stream_write  (ctf_descriptor->output_stream,
-                          ctf_descriptor->mem,
-                          event_size + TCP_HEADER_SIZE,
-                          NULL,
-                          &error);
+    g_output_stream_write (ctf_descriptor->output_stream,
+        ctf_descriptor->mem, event_size + TCP_HEADER_SIZE, NULL, &error);
   }
 
   g_mutex_unlock (&ctf_descriptor->mutex);
@@ -1008,34 +943,27 @@ do_print_ctf_init (event_id id)
 void
 gst_ctf_close (void)
 {
-  GError * error;
+  GError *error;
   gboolean res;
   fclose (ctf_descriptor->metadata);
   fclose (ctf_descriptor->datastream);
   g_mutex_clear (&ctf_descriptor->mutex);
 
-  if (NULL != ctf_descriptor->dir_name)
-  {
-      g_free(ctf_descriptor->dir_name);
+  if (NULL != ctf_descriptor->dir_name) {
+    g_free (ctf_descriptor->dir_name);
   }
-  if (NULL != ctf_descriptor->host_name)
-  {
-      g_free(ctf_descriptor->host_name);
+  if (NULL != ctf_descriptor->host_name) {
+    g_free (ctf_descriptor->host_name);
   }
   /* Closes the stream, releasing resources related to it. */
-  res = g_output_stream_close (ctf_descriptor->output_stream,
-                       NULL,
-                       &error);
-  if (FALSE == res)
-  {
-      GST_ERROR ("Failed to close output stream");
+  res = g_output_stream_close (ctf_descriptor->output_stream, NULL, &error);
+  if (FALSE == res) {
+    GST_ERROR ("Failed to close output stream");
   }
 
-  if (NULL != ctf_descriptor->socket_client)
-  {
-    g_object_unref(ctf_descriptor->socket_client);
+  if (NULL != ctf_descriptor->socket_client) {
+    g_object_unref (ctf_descriptor->socket_client);
   }
 
   g_free (ctf_descriptor);
 }
-
