@@ -31,3 +31,9 @@ echo "TEST 9"
 GST_SHARK_TRACE_LOC="./gst-shark9;tcp://localhost" ./gstparser
 
 
+echo "TEST 10"
+GST_SHARK_TRACE_LOC="tcp://127.0.0.1:a080" ./gstparser
+GST_SHARK_TRACE_LOC="tcp://127.0.0.1:8a80" ./gstparser
+GST_SHARK_TRACE_LOC="tcp://127.0.0.1:80a0" ./gstparser
+
+

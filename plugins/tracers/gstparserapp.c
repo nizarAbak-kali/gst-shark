@@ -46,6 +46,7 @@ static void tcp_parser_handler(gchar * line)
     gchar * line_end;
     gchar * host_name;
     gchar * port_name;
+    gchar * port_name_end;
     gsize str_len;
 
     host_name = line;
@@ -81,7 +82,9 @@ static void tcp_parser_handler(gchar * line)
         port_name = line_end;
 
         /* TODO: verify if is a numeric string */
-        ctf_descriptor->port_number = atoi(port_name);
+        ctf_descriptor->port_number = g_ascii_strtoull (port_name,
+                  &port_name_end,
+                  10);
 
         return;
     }
