@@ -35,7 +35,6 @@ typedef struct
     const parser_handler_desc * parser_desc_list;
     gint parser_desc_list_len;
     parser_handler_function no_match_handler;
-
 } parser_info;
 
 
@@ -63,6 +62,10 @@ static gboolean parse_strcmp(const gchar * ref, gchar ** cmp_string)
     return FALSE;
 }
 
+/* Register callback function list matched with a resource name.
+ * Also and optional handler callback can be added to process the 
+ * resources not identified.
+ */
 void parser_register_callbacks(
     const parser_handler_desc * parser_handler_desc_list,
     guint list_len,
@@ -74,6 +77,7 @@ void parser_register_callbacks(
 }
 
 
+/* Parse the line based in the list of the resources names registered */
 void parser_line(gchar * line)
 {
     gboolean cmp_res;
@@ -117,7 +121,7 @@ void parser_line(gchar * line)
                 match = TRUE;
 
                 line = next_location;
-
+                /* Search next location */
                 if (next_location == NULL)
                 {
                     break;
@@ -143,7 +147,7 @@ void parser_line(gchar * line)
             parser->no_match_handler(line);
             
             line = next_location;
-
+            /* Search next location */
             if (next_location == NULL)
             {
                 break;
