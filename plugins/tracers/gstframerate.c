@@ -50,6 +50,10 @@ GST_DEBUG_CATEGORY_STATIC (GST_CAT_STATES);
 G_DEFINE_TYPE_WITH_CODE (GstFramerateTracer, gst_framerate_tracer,
     GST_TYPE_TRACER, _do_init);
 
+#ifdef EVAL
+#define EVAL_TIME (10)
+#endif
+
 typedef struct _GstFramerateHash GstFramerateHash;
 
 struct _GstFramerateHash
@@ -58,7 +62,7 @@ struct _GstFramerateHash
   gint counter;
 };
 
-static const char framerate_metadata_event[] = "event {\n\
+static const gchar framerate_metadata_event[] = "event {\n\
 	name = framerate;\n\
 	id = %d;\n\
 	stream_id = %d;\n\
@@ -70,7 +74,7 @@ static const char framerate_metadata_event[] = "event {\n\
 \n";
 
 static void
-log_framerate (GstDebugCategory * cat, const char *fmt, ...)
+log_framerate (GstDebugCategory * cat, const gchar * fmt, ...)
 {
   va_list var_args;
 
@@ -85,7 +89,7 @@ do_print_framerate (gpointer * data)
   GstFramerateTracer *self;
   GHashTableIter iter;
   gpointer key, value;
-  GstFramerateHash *padtable;
+  GstFramerateHash *pad_table;
 
   self = (GstFramerateTracer *) data;
 
@@ -93,13 +97,13 @@ do_print_framerate (gpointer * data)
      of every element stored */
   g_hash_table_iter_init (&iter, self->frame_counters);
   while (g_hash_table_iter_next (&iter, &key, &value)) {
-    padtable = (GstFramerateHash *) value;
+    pad_table = (GstFramerateHash *) value;
     gst_tracer_log_trace (gst_structure_new ("framerate",
-            "source-pad", G_TYPE_STRING, padtable->fullname,
-            "fps", G_TYPE_INT, padtable->counter, NULL));
-    do_print_framerate_event (FPS_EVENT_ID, padtable->fullname,
-        padtable->counter);
-    padtable->counter = 0;
+            "source-pad", G_TYPE_STRING, pad_table->fullname,
+            "fps", G_TYPE_INT, pad_table->counter, NULL));
+    do_print_framerate_event (FPS_EVENT_ID, pad_table->fullname,
+        pad_table->counter);
+    pad_table->counter = 0;
     if (!self->start_timer) {
       return FALSE;
     }
@@ -122,12 +126,25 @@ do_destroy_hashtable_value (gpointer data)
 }
 
 static void
+do_destroy_hashtable_key (gpointer data)
+{
+  gst_object_unref (data);
+}
+
+static void
 do_pad_push_buffer_pre (GstFramerateTracer * self, guint64 ts, GstPad * pad,
     GstBuffer * buffer)
 {
   gchar *fullname;
   gint value = 1;
-  GstFramerateHash *padframes;
+  GstFramerateHash *pad_frames;
+
+#ifdef EVAL
+  if (ts > EVAL_TIME * GST_SECOND) {
+    self->start_timer = FALSE;
+    return;
+  }
+#endif
 
   g_return_if_fail (pad);
 
@@ -141,21 +158,22 @@ do_pad_push_buffer_pre (GstFramerateTracer * self, guint64 ts, GstPad * pad,
 
   /* Function contains on the Hash table returns TRUE if the key already exists */
   if (g_hash_table_contains (self->frame_counters, pad)) {
-
     /* If the pad that is pushing a buffer has already a space on the Hash table
        only the value should be updated */
-    padframes =
+    pad_frames =
         (GstFramerateHash *) g_hash_table_lookup (self->frame_counters, pad);
-    padframes->counter++;
+    pad_frames->counter++;
   } else {
     GST_INFO_OBJECT (self, "The %s key was added to the Hash Table", fullname);
 
+    /* Ref pad to be used in the Hash table */
+    gst_object_ref (pad);
     /* Reserving memory space for every structure that is going to be stored as a 
        value in the Hash table */
-    padframes = g_malloc (sizeof (GstFramerateHash));
-    padframes->fullname = g_strdup (fullname);
-    padframes->counter = value;
-    g_hash_table_insert (self->frame_counters, pad, (gpointer) padframes);
+    pad_frames = g_malloc (sizeof (GstFramerateHash));
+    pad_frames->fullname = g_strdup (fullname);
+    pad_frames->counter = value;
+    g_hash_table_insert (self->frame_counters, pad, (gpointer) pad_frames);
   }
 
   g_free (fullname);
@@ -215,8 +233,8 @@ gst_framerate_tracer_init (GstFramerateTracer * self)
   gchar *metadata_event;
 
   self->frame_counters =
-      g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL,
-      do_destroy_hashtable_value);
+      g_hash_table_new_full (g_direct_hash, g_direct_equal,
+      do_destroy_hashtable_key, do_destroy_hashtable_value);
   self->start_timer = FALSE;
 
   gst_tracing_register_hook (tracer, "pad-push-pre",

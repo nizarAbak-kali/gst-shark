@@ -23,12 +23,15 @@
 #endif /*  */
 
 #include <gst/gst.h>
-#include <gvc.h>
 #include <glib.h>
 #include <glib/gstdio.h>
-#include <cgraph.h>
-#include "gstctf.h"
 
+#ifdef ENABLE_GRAPHVIZ
+#  include <cgraph.h>
+#  include <gvc.h>
+#endif
+
+#include "gstctf.h"
 #include "gstdot.h"
 
 typedef struct _GstDotRenderThread GstDotRenderThread;
@@ -70,7 +73,8 @@ gst_dot_pipeline_to_file (GstBin * bin, GstDebugGraphDetails flags)
   full_file_name = g_strdup_printf ("%s" G_DIR_SEPARATOR_S "pipeline.dot",
       full_trace_dir);
 
-  if ((out = fopen (full_file_name, "wb"))) {
+  out = g_fopen (full_file_name, "w");
+  if (out != NULL) {
     gchar *buf;
 
     buf = gst_debug_bin_to_dot_data (bin, flags);
@@ -152,6 +156,7 @@ gst_dot_do_render (const gchar * dot_string, GstDotRender render, gpointer args)
   return TRUE;
 }
 
+#ifdef ENABLE_GRAPHVIZ
 gboolean
 gst_dot_x11_render (const gchar * dot_string, gpointer args)
 {
@@ -169,3 +174,10 @@ gst_dot_x11_render (const gchar * dot_string, gpointer args)
 
   return TRUE;
 }
+#else
+gboolean
+gst_dot_x11_render (const gchar * dot_string, gpointer args)
+{
+  return TRUE;
+}
+#endif

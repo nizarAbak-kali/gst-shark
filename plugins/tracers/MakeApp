@@ -1,5 +1,5 @@
 
-all: gstsharkserver gstsharkclient gstparser
+all: gstsharkserver gstsharkclient gstparser gtcpclient
 
 gstsharkserver: gstsharkserver.c
 	gcc -Wall -ggdb -O0 gstsharkserver.c -o gstsharkserver
@@ -10,8 +10,11 @@ gstsharkclient: gstsharkclient.c gstparser.c gstctf.c
 gstparser: gstparser.c gstparserapp.c 
 	gcc -Wall -ggdb -O0 gstparser.c gstparserapp.c -o gstparser `pkg-config --cflags --libs gio-2.0 gstreamer-1.0`
 
+gtcpclient: glibtcpclient.c
+	gcc -Wall -ggdb -O0 glibtcpclient.c -o gtcpclient `pkg-config --cflags --libs gio-2.0`
+
 clean:
-	rm -f gstsharkserver gstsharkclient
+	rm -f gstsharkserver gstsharkclient gtcpclient
 
 debug:
 	echo $(pkg-config --cflags --libs gstreamer-1.0)

@@ -44,15 +44,17 @@
 GST_DEBUG_CATEGORY_STATIC (gst_cpuusage_debug);
 #define GST_CAT_DEFAULT gst_cpuusage_debug
 
-G_LOCK_DEFINE (_proc);
-
 #define _do_init \
     GST_DEBUG_CATEGORY_INIT (gst_cpuusage_debug, "cpuusage", 0, "cpuusage tracer");
 #define gst_cpuusage_tracer_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstCPUUsageTracer, gst_cpuusage_tracer,
     GST_TYPE_TRACER, _do_init);
 
-static const char cpuusage_metadata_event[] = "event {\n\
+#ifdef EVAL
+#define EVAL_TIME (10)
+#endif
+
+static const gchar cpuusage_metadata_event[] = "event {\n\
 	name = cpuusage;\n\
 	id = %d;\n\
 	stream_id = %d;\n\
@@ -63,13 +65,7 @@ static const char cpuusage_metadata_event[] = "event {\n\
 };\n\
 \n";
 
-gpointer cpuusage_thread_func (gpointer data);
-
-static void
-do_stats (GstTracer * obj, guint64 ts)
-{
-
-}
+gpointer cpu_usage_thread_func (gpointer data);
 
 /* tracer class */
 
@@ -88,31 +84,42 @@ gst_cpuusage_tracer_class_init (GstCPUUsageTracerClass * klass)
 }
 
 gpointer
-cpuusage_thread_func (gpointer data)
+cpu_usage_thread_func (gpointer data)
 {
   GstCPUUsageTracer *self;
-  GstCPUUsage *cpuusage;
-  gdouble *cpu_usage;
+  GstCPUUsage *cpu_usage;
+  gdouble *cpu_load;
   gint msg_id;
   gint cpu_num;
 
-  self = (GstCPUUsageTracer *) data;
-  cpuusage = &self->cpuusage;
+#ifdef EVAL
+  gint sec_counter;
+#endif
 
-  cpu_usage = CPU_USAGE_ARRAY (cpuusage);
-  cpu_num = CPU_USAGE_ARRAY_LENGTH (cpuusage);
+  self = (GstCPUUsageTracer *) data;
+  cpu_usage = &self->cpu_usage;
+
+  cpu_load = CPU_USAGE_ARRAY (cpu_usage);
+  cpu_num = CPU_USAGE_ARRAY_LENGTH (cpu_usage);
 
   while (1) {
-    gst_cpu_usage_compute (cpuusage);
+    gst_cpu_usage_compute (cpu_usage);
 
     for (msg_id = 0; msg_id < cpu_num; ++msg_id) {
       gst_tracer_log_trace (gst_structure_new ("cpu",
               "number", G_TYPE_INT, msg_id,
-              "load", G_TYPE_DOUBLE, cpu_usage[msg_id] * 100, NULL));
+              "load", G_TYPE_DOUBLE, cpu_load[msg_id] * 100, NULL));
       do_print_cpuusage_event (CPUUSAGE_EVENT_ID, msg_id,
-          (int) (cpu_usage[msg_id] * 100));
+          (int) (cpu_load[msg_id] * 100));
     }
     sleep (1);
+
+#ifdef EVAL
+    sec_counter++;
+    if (sec_counter > EVAL_TIME)
+      break;
+#endif
+
   }
   g_thread_exit (0);
 
@@ -123,20 +130,16 @@ static void
 gst_cpuusage_tracer_init (GstCPUUsageTracer * self)
 {
   gchar *metadata_event;
-  GstTracer *tracer = GST_TRACER (self);
 
-  gst_cpu_usage_init (&(self->cpuusage));
-
-  gst_tracing_register_hook (tracer, "pad-push-pre", G_CALLBACK (do_stats));
+  gst_cpu_usage_init (&(self->cpu_usage));
 
   /* Create new thread to compute the cpu usage periodically */
-  g_thread_new ("cpuusage_compute", cpuusage_thread_func, self);
+  g_thread_new ("cpuusage_compute", cpu_usage_thread_func, self);
 
   gst_tracer_log_trace (gst_structure_new ("cpuusage.class", "number", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_INT, "description", G_TYPE_STRING, "Core number", "flags", G_TYPE_STRING, "aggregated",     /* TODO: use gflags */
               "min", G_TYPE_UINT, G_GINT64_CONSTANT (0), "max", G_TYPE_UINT, CPU_NUM_MAX, NULL), "load", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_DOUBLE, "description", G_TYPE_STRING, "Core load percentage", "flags", G_TYPE_STRING, "aggregated",       /* TODO: use gflags */
               "min", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (0),
               "max", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (100), NULL), NULL));
-
 
   metadata_event =
       g_strdup_printf (cpuusage_metadata_event, CPUUSAGE_EVENT_ID, 0);

@@ -42,15 +42,17 @@
 GST_DEBUG_CATEGORY_STATIC (gst_proctime_debug);
 #define GST_CAT_DEFAULT gst_proctime_debug
 
-G_LOCK_DEFINE (_proc);
-
 #define _do_init \
     GST_DEBUG_CATEGORY_INIT (gst_proctime_debug, "proctime", 0, "proctime tracer");
 #define gst_proctime_tracer_parent_class parent_class
 G_DEFINE_TYPE_WITH_CODE (GstProcTimeTracer, gst_proctime_tracer,
     GST_TYPE_TRACER, _do_init);
 
-static const char proctime_metadata_event[] = "event {\n\
+#ifdef EVAL
+#define EVAL_TIME (10)
+#endif
+
+static const gchar proctime_metadata_event[] = "event {\n\
 	name = proctime;\n\
 	id = %d;\n\
 	stream_id = %d;\n\
@@ -64,70 +66,65 @@ static const char proctime_metadata_event[] = "event {\n\
 static void
 do_push_buffer_pre (GstTracer * self, guint64 ts, GstPad * pad)
 {
-  GstProcTimeTracer *procTimeTracer;
-  GstProcTime *procTime;
+  GstProcTimeTracer *proc_time_tracer;
+  GstProcTime *proc_time;
 
-  gchar *parentName;
-  gchar *peerParentName;
-  GstElement *element;
-  GstPad *padPeer;
+  GstPad *pad_peer;
   gchar *name;
   GstClockTime time;
-  GString *timeString;
+  GString *time_string;
 
-  procTimeTracer = GST_PROCTIME_TRACER_CAST (self);
-  procTime = &procTimeTracer->procTime;
-  timeString = procTimeTracer->timeString;
+#ifdef EVAL
+  if (ts > EVAL_TIME * GST_SECOND)
+    return;
+#endif
 
-  element = gst_pad_get_parent_element (pad);
-  parentName = gst_element_get_name (element);
+  proc_time_tracer = GST_PROCTIME_TRACER_CAST (self);
+  proc_time = &proc_time_tracer->proc_time;
+  time_string = proc_time_tracer->time_string;
 
-  padPeer = gst_pad_get_peer (pad);
-  element = gst_pad_get_parent_element (padPeer);
-  peerParentName = gst_element_get_name (element);
+  pad_peer = gst_pad_get_peer (pad);
 
-  g_free (parentName);
-  g_free (peerParentName);
+  gst_proctime_proc_time (proc_time, &time, &name, pad_peer, pad);
 
-  gst_proctime_proc_time (procTime, &time, &name, padPeer, pad);
   if (NULL != name) {
-    g_string_printf (timeString, "%" GST_TIME_FORMAT, GST_TIME_ARGS (time));
+    g_string_printf (time_string, "%" GST_TIME_FORMAT, GST_TIME_ARGS (time));
 
     gst_tracer_log_trace (gst_structure_new (name,
-            "time", G_TYPE_STRING, timeString->str, NULL));
+            "time", G_TYPE_STRING, time_string->str, NULL));
 
     do_print_proctime_event (PROCTIME_EVENT_ID, name, time);
   }
-}
 
+  gst_object_unref (pad_peer);
+}
 
 static void
 do_element_new (GObject * self, GstClockTime ts, GstElement * element)
 {
-  GstProcTimeTracer *procTimeTracer;
-  GstProcTime *procTime;
+  GstProcTimeTracer *proc_time_tracer;
+  GstProcTime *proc_time;
 
-  procTimeTracer = GST_PROCTIME_TRACER (self);
-  procTime = &procTimeTracer->procTime;
+  proc_time_tracer = GST_PROCTIME_TRACER (self);
+  proc_time = &proc_time_tracer->proc_time;
 
-  gst_proctime_add_new_element (procTime, element);
+  gst_proctime_add_new_element (proc_time, element);
 }
-
 
 /* tracer class */
 
 static void
 gst_proctime_tracer_finalize (GObject * obj)
 {
-  GstProcTimeTracer *procTimeTracer;
-  GstProcTime *procTime;
+  GstProcTimeTracer *proc_time_tracer;
+  GstProcTime *proc_time;
 
-  procTimeTracer = GST_PROCTIME_TRACER (obj);
-  procTime = &procTimeTracer->procTime;
+  proc_time_tracer = GST_PROCTIME_TRACER (obj);
+  proc_time = &proc_time_tracer->proc_time;
 
-  g_string_free (procTimeTracer->timeString, TRUE);
+  g_string_free (proc_time_tracer->time_string, TRUE);
 
-  gst_proctime_finalize (procTime);
+  gst_proctime_finalize (proc_time);
 
   G_OBJECT_CLASS (parent_class)->finalize (obj);
 }
@@ -147,7 +144,7 @@ gst_proctime_tracer_init (GstProcTimeTracer * self)
   GstTracer *tracer = GST_TRACER (self);
   gchar *metadata_event;
 
-  self->timeString = g_string_new ("0:00:00.000000000 ");
+  self->time_string = g_string_new ("0:00:00.000000000 ");
 
   gst_tracing_register_hook (tracer, "pad-push-pre",
       G_CALLBACK (do_push_buffer_pre));

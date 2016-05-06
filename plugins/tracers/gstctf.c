@@ -127,7 +127,7 @@ static const parser_handler_desc parser_handler_desc_list[] = {
 };
 
 /* Metadata format string */
-static const char metadata_fmt[] = "\
+static const gchar metadata_fmt[] = "\
 /* CTF 1.8 */\n\
 typealias integer { size = 8; align = 8; signed = false; } := uint8_t;\n\
 typealias integer { size = 16; align = 8; signed = false; } := uint16_t;\n\
