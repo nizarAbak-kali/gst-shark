@@ -29,7 +29,7 @@
 #include <glib/gprintf.h>
 #include <gio/gio.h>
 #include <string.h>
-#include <stdlib.h>             /* TODO: remove atoi */
+
 
 #include "gstctf.h"
 #include "gstparser.h"
@@ -91,7 +91,6 @@ typedef enum
   BYTE_ORDER_BE,
   BYTE_ORDER_LE,
 } byte_order;
-
 
 
 struct _GstCtfDescriptor
@@ -342,32 +341,11 @@ uuid_to_uuidstring (gchar * uuid_string, guint8 * uuid)
   *++uuid_string_idx = 0;
 }
 
-#ifdef STREAM_ASYNC_WRITE
-static void
-async_ready_callback (GObject * source_object,
-    GAsyncResult * res, gpointer user_data)
-{
-  GError *error = NULL;
-  gssize bytes_written;
-
-  GST_ERROR ("ERROR");
-  bytes_written =
-      g_output_stream_write_finish (ctf_descriptor->output_stream, res, &error);
-
-  if (bytes_written <= 0) {
-    GST_ERROR ("ERROR");
-    return;
-  }
-}
-#endif
-
 static void
 generate_metadata (gint major, gint minor, gint byte_order)
 {
   gint str_len;
-#ifndef STREAM_ASYNC_WRITE
   GError *error;
-#endif
   guint8 *event_mem;
   guint8 *mem;
   gchar uuid_string[] = "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX0";
@@ -396,15 +374,8 @@ generate_metadata (gint major, gint minor, gint byte_order)
   if (FALSE == ctf_descriptor->tcp_output_disable) {
     /* Write the TCP header */
     TCP_EVENT_HEADER_WRITE (TCP_METADATA_ID, str_len, mem);
-#ifdef STREAM_ASYNC_WRITE
-    g_output_stream_write_async (ctf_descriptor->output_stream,
-        ctf_descriptor->mem,
-        str_len + TCP_HEADER_SIZE,
-        G_PRIORITY_DEFAULT, NULL, async_ready_callback, NULL);
-#else
     g_output_stream_write (ctf_descriptor->output_stream,
         ctf_descriptor->mem, str_len + TCP_HEADER_SIZE, NULL, &error);
-#endif
   }
   g_mutex_unlock (&ctf_descriptor->mutex);
 }
@@ -531,7 +502,6 @@ ctf_process_env_var (void)
   }
 }
 
-
 static void
 create_ctf_path (gchar * dir_name)
 {
@@ -586,26 +556,14 @@ ctf_file_init (void)
 }
 
 
-
-#ifdef ASYNC_CONN
-static void
-async_ready_callback (GObject * source_object,
-    GAsyncResult * res, gpointer user_data)
-{
-
-}
-#endif
-
 static void
 ctf_tcp_init (void)
 {
   GSocketClient *socket_client;
-
   GOutputStream *output_stream;
-#ifndef ASYNC_CONN
   GSocketConnection *socket_connection;
   GError *error;
-#endif
+
   /* Verify if the host name was given */
   if (NULL == ctf_descriptor->host_name) {
     ctf_descriptor->tcp_output_disable = TRUE;
@@ -617,19 +575,11 @@ ctf_tcp_init (void)
 
   g_socket_client_set_protocol (socket_client, SOCKET_PROTOCOL);
 
-  /* TODO: see g_socket_client_connect_to_host_async */
   /* Attempts to create a TCP connection to the named host. */
-
-#ifndef ASYNC_CONN
   error = NULL;
   socket_connection = g_socket_client_connect_to_host (socket_client,
       ctf_descriptor->host_name, ctf_descriptor->port_number, NULL, &error);
-#else
-  g_socket_client_connect_to_host_async (socket_client,
-      ctf_descriptor->host_name,
-      ctf_descriptor->port_number, NULL, async_ready_callback, NULL);
 
-#endif
   /* Verify connection */
   if (NULL == socket_connection) {
     g_object_unref (socket_client);

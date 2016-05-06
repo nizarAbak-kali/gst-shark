@@ -22,7 +22,6 @@
 #include <stdlib.h>
 
 #include "gstparser.h"
-#include "gstsharkclient.h"
 
 
 struct _GstCTFParser
@@ -31,11 +30,6 @@ struct _GstCTFParser
   gint parser_desc_list_len;
   parser_handler_function no_match_handler;
 };
-
-
-//~ struct GstCTFParser parser_mem;
-//~ struct GstCTFParser * parser = &parser_mem;
-
 
 static gboolean
 parse_strcmp (const gchar * ref, gchar ** cmp_string)

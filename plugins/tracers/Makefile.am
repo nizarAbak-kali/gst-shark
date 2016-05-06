@@ -29,7 +29,7 @@ libgstsharktracers_@GST_SHARK_API_VERSION@_la_SOURCES = \
 	gstcpuusage.c \
 	gstproctime.c \
 	gstinterlatency.c \
-    gstscheduletime.c \
+	gstscheduletime.c \
 	gstframerate.c
 
 libgstsharktracers_@GST_SHARK_API_VERSION@_la_CFLAGS = \
