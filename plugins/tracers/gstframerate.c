@@ -54,6 +54,10 @@ G_DEFINE_TYPE_WITH_CODE (GstFramerateTracer, gst_framerate_tracer,
 #define EVAL_TIME (10)
 #endif
 
+#ifdef GST_STABLE_RELEASE
+static GstTracerRecord *tr_framerate;
+#endif
+
 typedef struct _GstFramerateHash GstFramerateHash;
 
 struct _GstFramerateHash
@@ -98,9 +102,16 @@ do_print_framerate (gpointer * data)
   g_hash_table_iter_init (&iter, self->frame_counters);
   while (g_hash_table_iter_next (&iter, &key, &value)) {
     pad_table = (GstFramerateHash *) value;
+
+#ifdef GST_STABLE_RELEASE
+    gst_tracer_record_log (tr_framerate, pad_table->fullname,
+        pad_table->counter);
+#else
     gst_tracer_log_trace (gst_structure_new ("framerate",
             "source-pad", G_TYPE_STRING, pad_table->fullname,
             "fps", G_TYPE_INT, pad_table->counter, NULL));
+#endif
+
     do_print_framerate_event (FPS_EVENT_ID, pad_table->fullname,
         pad_table->counter);
     pad_table->counter = 0;
@@ -243,6 +254,18 @@ gst_framerate_tracer_init (GstFramerateTracer * self)
   gst_tracing_register_hook (tracer, "element-change-state-post",
       G_CALLBACK (do_element_change_state_post));
 
+#ifdef GST_STABLE_RELEASE
+  tr_framerate = gst_tracer_record_new ("framerate.class",
+      "source-pad", GST_TYPE_STRUCTURE, gst_structure_new ("scope",
+          "related-to", G_TYPE_STRING, "Pad",
+          NULL),
+      "fps", GST_TYPE_STRUCTURE, gst_structure_new ("value",
+          "type", G_TYPE_GTYPE, G_TYPE_INT,
+          "description", G_TYPE_STRING, "Frames per second",
+          "flags", G_TYPE_STRING, "aggregated",
+          "min", G_TYPE_INT, G_GUINT64_CONSTANT (0),
+          "max", G_TYPE_INT, G_GUINT64_CONSTANT (5000), NULL), NULL);
+#else
   gst_tracer_log_trace (gst_structure_new ("framerate.class",
           "source-pad", GST_TYPE_STRUCTURE, gst_structure_new ("scope",
               "related-to", G_TYPE_STRING, "Pad",
@@ -253,6 +276,7 @@ gst_framerate_tracer_init (GstFramerateTracer * self)
               "flags", G_TYPE_STRING, "aggregated",
               "min", G_TYPE_INT, G_GUINT64_CONSTANT (0),
               "max", G_TYPE_INT, G_GUINT64_CONSTANT (5000), NULL), NULL));
+#endif
 
   metadata_event = g_strdup_printf (framerate_metadata_event, FPS_EVENT_ID, 0);
   add_metadata_event_struct (metadata_event);

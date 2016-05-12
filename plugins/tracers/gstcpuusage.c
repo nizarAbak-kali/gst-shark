@@ -54,6 +54,10 @@ G_DEFINE_TYPE_WITH_CODE (GstCPUUsageTracer, gst_cpuusage_tracer,
 #define EVAL_TIME (10)
 #endif
 
+#ifdef GST_STABLE_RELEASE
+static GstTracerRecord *tr_cpuusage;
+#endif
+
 static const gchar cpuusage_metadata_event[] = "event {\n\
 	name = cpuusage;\n\
 	id = %d;\n\
@@ -106,9 +110,15 @@ cpu_usage_thread_func (gpointer data)
     gst_cpu_usage_compute (cpu_usage);
 
     for (msg_id = 0; msg_id < cpu_num; ++msg_id) {
+
+#ifdef GST_STABLE_RELEASE
+      gst_tracer_record_log (tr_cpuusage, msg_id, cpu_load[msg_id] * 100);
+#else
       gst_tracer_log_trace (gst_structure_new ("cpu",
               "number", G_TYPE_INT, msg_id,
               "load", G_TYPE_DOUBLE, cpu_load[msg_id] * 100, NULL));
+#endif
+
       do_print_cpuusage_event (CPUUSAGE_EVENT_ID, msg_id,
           (int) (cpu_load[msg_id] * 100));
     }
@@ -136,10 +146,17 @@ gst_cpuusage_tracer_init (GstCPUUsageTracer * self)
   /* Create new thread to compute the cpu usage periodically */
   g_thread_new ("cpuusage_compute", cpu_usage_thread_func, self);
 
+#ifdef GST_STABLE_RELEASE
+  tr_cpuusage = gst_tracer_record_new ("cpuusage.class", "number", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_INT, "description", G_TYPE_STRING, "Core number", "flags", G_TYPE_STRING, "aggregated", /* TODO: use gflags */
+          "min", G_TYPE_UINT, G_GINT64_CONSTANT (0), "max", G_TYPE_UINT, CPU_NUM_MAX, NULL), "load", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_DOUBLE, "description", G_TYPE_STRING, "Core load percentage", "flags", G_TYPE_STRING, "aggregated",   /* TODO: use gflags */
+          "min", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (0),
+          "max", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (100), NULL), NULL);
+#else
   gst_tracer_log_trace (gst_structure_new ("cpuusage.class", "number", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_INT, "description", G_TYPE_STRING, "Core number", "flags", G_TYPE_STRING, "aggregated",     /* TODO: use gflags */
               "min", G_TYPE_UINT, G_GINT64_CONSTANT (0), "max", G_TYPE_UINT, CPU_NUM_MAX, NULL), "load", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_DOUBLE, "description", G_TYPE_STRING, "Core load percentage", "flags", G_TYPE_STRING, "aggregated",       /* TODO: use gflags */
               "min", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (0),
               "max", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (100), NULL), NULL));
+#endif
 
   metadata_event =
       g_strdup_printf (cpuusage_metadata_event, CPUUSAGE_EVENT_ID, 0);
