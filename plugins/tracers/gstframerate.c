@@ -264,9 +264,8 @@ gst_framerate_tracer_init (GstFramerateTracer * self)
           "type", G_TYPE_GTYPE, G_TYPE_UINT,
           "description", G_TYPE_STRING, "Frames per second",
           "flags", GST_TYPE_TRACER_VALUE_FLAGS,
-          GST_TRACER_VALUE_FLAGS_AGGREGATED, "min", G_TYPE_UINT,
-          G_GUINT64_CONSTANT (0), "max", G_TYPE_UINT, G_GUINT64_CONSTANT (5000),
-          NULL), NULL);
+          GST_TRACER_VALUE_FLAGS_AGGREGATED, "min", G_TYPE_UINT, 0, "max",
+          G_TYPE_UINT, 5000, NULL), NULL);
 #else
   gst_tracer_log_trace (gst_structure_new ("framerate.class",
           "source-pad", GST_TYPE_STRUCTURE, gst_structure_new ("scope",
