@@ -93,7 +93,7 @@ cpu_usage_thread_func (gpointer data)
   GstCPUUsageTracer *self;
   GstCPUUsage *cpu_usage;
   gdouble *cpu_load;
-  gint msg_id;
+  guint msg_id;
   gint cpu_num;
 
 #ifdef EVAL
@@ -115,7 +115,7 @@ cpu_usage_thread_func (gpointer data)
       gst_tracer_record_log (tr_cpuusage, msg_id, cpu_load[msg_id] * 100);
 #else
       gst_tracer_log_trace (gst_structure_new ("cpu",
-              "number", G_TYPE_INT, msg_id,
+              "number", G_TYPE_UINT, msg_id,
               "load", G_TYPE_DOUBLE, cpu_load[msg_id] * 100, NULL));
 #endif
 
@@ -147,13 +147,31 @@ gst_cpuusage_tracer_init (GstCPUUsageTracer * self)
   g_thread_new ("cpuusage_compute", cpu_usage_thread_func, self);
 
 #ifdef GST_STABLE_RELEASE
-  tr_cpuusage = gst_tracer_record_new ("cpuusage.class", "number", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_INT, "description", G_TYPE_STRING, "Core number", "flags", G_TYPE_STRING, "aggregated", /* TODO: use gflags */
-          "min", G_TYPE_UINT, G_GINT64_CONSTANT (0), "max", G_TYPE_UINT, CPU_NUM_MAX, NULL), "load", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_DOUBLE, "description", G_TYPE_STRING, "Core load percentage", "flags", G_TYPE_STRING, "aggregated",   /* TODO: use gflags */
-          "min", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (0),
-          "max", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (100), NULL), NULL);
+  tr_cpuusage = gst_tracer_record_new ("cpuusage.class",
+      "number", GST_TYPE_STRUCTURE, gst_structure_new ("value",
+          "type", G_TYPE_GTYPE, G_TYPE_UINT,
+          "description", G_TYPE_STRING, "Core number",
+          "flags", GST_TYPE_TRACER_VALUE_FLAGS,
+          GST_TRACER_VALUE_FLAGS_AGGREGATED, "min", G_TYPE_UINT,
+          G_GUINT64_CONSTANT (0), "max", G_TYPE_UINT, CPU_NUM_MAX, NULL),
+      "load", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type",
+          G_TYPE_GTYPE, G_TYPE_DOUBLE, "description", G_TYPE_STRING,
+          "Core load percentage [%]", "flags", GST_TYPE_TRACER_VALUE_FLAGS,
+          GST_TRACER_VALUE_FLAGS_AGGREGATED, "min", G_TYPE_DOUBLE,
+          G_GUINT64_CONSTANT (0), "max", G_TYPE_DOUBLE,
+          G_GUINT64_CONSTANT (100), NULL), NULL);
 #else
-  gst_tracer_log_trace (gst_structure_new ("cpuusage.class", "number", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_INT, "description", G_TYPE_STRING, "Core number", "flags", G_TYPE_STRING, "aggregated",     /* TODO: use gflags */
-              "min", G_TYPE_UINT, G_GINT64_CONSTANT (0), "max", G_TYPE_UINT, CPU_NUM_MAX, NULL), "load", GST_TYPE_STRUCTURE, gst_structure_new ("value", "type", G_TYPE_GTYPE, G_TYPE_DOUBLE, "description", G_TYPE_STRING, "Core load percentage", "flags", G_TYPE_STRING, "aggregated",       /* TODO: use gflags */
+  gst_tracer_log_trace (gst_structure_new ("cpuusage.class",
+          "number", GST_TYPE_STRUCTURE, gst_structure_new ("value",
+              "type", G_TYPE_GTYPE, G_TYPE_UINT,
+              "description", G_TYPE_STRING, "Core number",
+              "flags", G_TYPE_STRING, "aggregated",
+              "min", G_TYPE_UINT, G_GUINT64_CONSTANT (0),
+              "max", G_TYPE_UINT, CPU_NUM_MAX, NULL),
+          "load", GST_TYPE_STRUCTURE, gst_structure_new ("value",
+              "type", G_TYPE_GTYPE, G_TYPE_DOUBLE,
+              "description", G_TYPE_STRING, "Core load percentage [%]",
+              "flags", G_TYPE_STRING, "aggregated",
               "min", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (0),
               "max", G_TYPE_DOUBLE, G_GUINT64_CONSTANT (100), NULL), NULL));
 #endif

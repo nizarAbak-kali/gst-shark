@@ -163,15 +163,20 @@ gst_proctime_tracer_init (GstProcTimeTracer * self)
 #ifdef GST_STABLE_RELEASE
   tr_proctime = gst_tracer_record_new ("proctime.class",
       "time", GST_TYPE_STRUCTURE, gst_structure_new ("value",
-          "type", G_TYPE_GTYPE, G_TYPE_INT64,
-          "description", G_TYPE_STRING, "Processing time (Microseconds)",
-          NULL), NULL);
+          "type", G_TYPE_GTYPE, G_TYPE_UINT64,
+          "description", G_TYPE_STRING, "Processing time [us]",
+          "flags", GST_TYPE_TRACER_VALUE_FLAGS,
+          GST_TRACER_VALUE_FLAGS_AGGREGATED, "min", G_TYPE_UINT64,
+          G_GUINT64_CONSTANT (0), "max", G_TYPE_UINT64, G_MAXUINT64, NULL),
+      NULL);
 #else
   gst_tracer_log_trace (gst_structure_new ("proctime.class",
           "time", GST_TYPE_STRUCTURE, gst_structure_new ("value",
-              "type", G_TYPE_GTYPE, G_TYPE_INT64,
-              "description", G_TYPE_STRING, "Processing time (Microseconds)",
-              NULL), NULL));
+              "type", G_TYPE_GTYPE, G_TYPE_UINT64,
+              "description", G_TYPE_STRING, "Processing time [us]",
+              "flags", G_TYPE_STRING, "aggregated",
+              "min", G_TYPE_UINT64, G_GUINT64_CONSTANT (0),
+              "max", G_TYPE_UINT64, G_MAXUINT64, NULL), NULL));
 #endif
 
   metadata_event =

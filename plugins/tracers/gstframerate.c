@@ -63,7 +63,7 @@ typedef struct _GstFramerateHash GstFramerateHash;
 struct _GstFramerateHash
 {
   const gchar *fullname;
-  gint counter;
+  guint counter;
 };
 
 static const gchar framerate_metadata_event[] = "event {\n\
@@ -109,7 +109,7 @@ do_print_framerate (gpointer * data)
 #else
     gst_tracer_log_trace (gst_structure_new ("framerate",
             "source-pad", G_TYPE_STRING, pad_table->fullname,
-            "fps", G_TYPE_INT, pad_table->counter, NULL));
+            "fps", G_TYPE_UINT, pad_table->counter, NULL));
 #endif
 
     do_print_framerate_event (FPS_EVENT_ID, pad_table->fullname,
@@ -165,7 +165,7 @@ do_pad_push_buffer_pre (GstFramerateTracer * self, guint64 ts, GstPad * pad,
 
   /* The full name of every pad has the format elementName.padName and it is going 
      to be used for displaying the framerate in a friendly user way */
-  fullname = g_strdup_printf ("%s.%s", GST_DEBUG_PAD_NAME (pad));
+  fullname = g_strdup_printf ("%s_%s", GST_DEBUG_PAD_NAME (pad));
 
   /* Function contains on the Hash table returns TRUE if the key already exists */
   if (g_hash_table_contains (self->frame_counters, pad)) {
@@ -257,25 +257,27 @@ gst_framerate_tracer_init (GstFramerateTracer * self)
 #ifdef GST_STABLE_RELEASE
   tr_framerate = gst_tracer_record_new ("framerate.class",
       "source-pad", GST_TYPE_STRUCTURE, gst_structure_new ("scope",
-          "related-to", G_TYPE_STRING, "Pad",
+          "type", G_TYPE_GTYPE, G_TYPE_STRING,
+          "related-to", GST_TYPE_TRACER_VALUE_SCOPE, GST_TRACER_VALUE_SCOPE_PAD,
           NULL),
       "fps", GST_TYPE_STRUCTURE, gst_structure_new ("value",
-          "type", G_TYPE_GTYPE, G_TYPE_INT,
+          "type", G_TYPE_GTYPE, G_TYPE_UINT,
           "description", G_TYPE_STRING, "Frames per second",
-          "flags", G_TYPE_STRING, "aggregated",
-          "min", G_TYPE_INT, G_GUINT64_CONSTANT (0),
-          "max", G_TYPE_INT, G_GUINT64_CONSTANT (5000), NULL), NULL);
+          "flags", GST_TYPE_TRACER_VALUE_FLAGS,
+          GST_TRACER_VALUE_FLAGS_AGGREGATED, "min", G_TYPE_UINT,
+          G_GUINT64_CONSTANT (0), "max", G_TYPE_UINT, G_GUINT64_CONSTANT (5000),
+          NULL), NULL);
 #else
   gst_tracer_log_trace (gst_structure_new ("framerate.class",
           "source-pad", GST_TYPE_STRUCTURE, gst_structure_new ("scope",
               "related-to", G_TYPE_STRING, "Pad",
               NULL),
           "fps", GST_TYPE_STRUCTURE, gst_structure_new ("value",
-              "type", G_TYPE_GTYPE, G_TYPE_INT,
+              "type", G_TYPE_GTYPE, G_TYPE_UINT,
               "description", G_TYPE_STRING, "Frames per second",
               "flags", G_TYPE_STRING, "aggregated",
-              "min", G_TYPE_INT, G_GUINT64_CONSTANT (0),
-              "max", G_TYPE_INT, G_GUINT64_CONSTANT (5000), NULL), NULL));
+              "min", G_TYPE_UINT, G_GUINT64_CONSTANT (0),
+              "max", G_TYPE_UINT, G_GUINT64_CONSTANT (5000), NULL), NULL));
 #endif
 
   metadata_event = g_strdup_printf (framerate_metadata_event, FPS_EVENT_ID, 0);

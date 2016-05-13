@@ -197,14 +197,18 @@ gst_scheduletime_tracer_init (GstScheduletimeTracer * self)
   tr_schedule = gst_tracer_record_new ("scheduletime.class",
       "time", GST_TYPE_STRUCTURE, gst_structure_new ("value",
           "type", G_TYPE_GTYPE, G_TYPE_INT64,
-          "description", G_TYPE_STRING, "Scheduling time (Nanoseconds)",
-          NULL), NULL);
+          "description", G_TYPE_STRING, "Scheduling time [ns]",
+          "flags", GST_TYPE_TRACER_VALUE_FLAGS,
+          GST_TRACER_VALUE_FLAGS_AGGREGATED, "min", G_TYPE_INT64,
+          G_GINT64_CONSTANT (0), "max", G_TYPE_INT64, G_MAXINT64, NULL), NULL);
 #else
   gst_tracer_log_trace (gst_structure_new ("scheduletime.class",
           "time", GST_TYPE_STRUCTURE, gst_structure_new ("value",
               "type", G_TYPE_GTYPE, G_TYPE_INT64,
-              "description", G_TYPE_STRING, "Scheduling time (Nanoseconds)",
-              NULL), NULL));
+              "description", G_TYPE_STRING, "Scheduling time [ns]",
+              "flags", G_TYPE_STRING, "aggregated",
+              "min", G_TYPE_INT64, G_GINT64_CONSTANT (0),
+              "max", G_TYPE_INT64, G_MAXINT64, NULL), NULL));
 #endif
 
   metadata_event =
