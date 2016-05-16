@@ -278,8 +278,22 @@ AC_ARG_ENABLE(check,
   ], [
     dnl Default value
     case $host_os in
-      mingw* | msvc* | mks*) BUILD_CHECK=no ;;
-      *) BUILD_CHECK=yes ;;
+      linux*)
+         AC_MSG_NOTICE([
+           The reading of the CPU usage is enabled
+         ])
+         AC_DEFINE(GST_CPUUSAGE_ENABLE, 1, [Define this to enable the tracer for reading of the CPU usage])
+         BUILD_CHECK=yes ;;
+      mingw* | msvc* | mks* | darwin*)
+         AC_MSG_NOTICE([
+           The reading of the CPU usage is disabled
+         ])
+         BUILD_CHECK=yes ;;
+      *)
+         BUILD_CHECK=no
+         AC_MSG_ERROR([
+           Your platform is not currently supported
+         ]) ;;
     esac
 ])
 dnl bit of a misnomer, but keep the conditional named like this so we don't
