@@ -11,7 +11,7 @@ then
     echo "Error: $1 is not a directory"
 fi
 
-tracer_list=("proctime" "interlatency")
+tracer_list=("proctime" "interlatency" "framerate")
 
 #
 rm -f tracer.pdf

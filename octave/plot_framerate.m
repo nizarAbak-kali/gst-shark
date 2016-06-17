@@ -9,13 +9,13 @@ LINEWIDTH = 1;
 TRUE = 1;
 FALSE = 0;
 
-[element_name_list, timestamp_mat, time_mat] = load_serie_timestamp_value('proctime.mat');
+[element_name_list, timestamp_mat, time_mat] = load_serie_timestamp_value('framerate.mat');
 
-figure('Name','Processing time')
+figure('Name','Frame rate')
 plot(timestamp_mat',time_mat','linewidth',LINEWIDTH)
-title('Processing time','fontsize',FONTSIZE)
+title('Frame rate','fontsize',FONTSIZE)
 xlabel('time (seconds)','fontsize',FONTSIZE)
-ylabel('time (nanoseconds)','fontsize',FONTSIZE)
+ylabel('Frame per second','fontsize',FONTSIZE)
 legend(element_name_list)
 
 print tracer -dpdf -append
