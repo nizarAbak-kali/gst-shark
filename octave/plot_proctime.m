@@ -10,19 +10,17 @@ TRUE = 1;
 FALSE = 0;
 
 # Open tracer data
-fileID = fopen('interlatency.mat');
+fileID = fopen('proctime.mat');
 
 count = 1;
 # Compute How many series need to be created
 
-[timestamp1 count] = fscanf(fileID,'[%s]');
-[from_pad count] = fscanf(fileID,'%s\"');
-[to_pad count] = fscanf(fileID,'%s\"');
+[timestamp count] = fscanf(fileID,'[%s]');
+%~ [from_pad count] = fscanf(fileID,'%s\"');
+[element count] = fscanf(fileID,'%s\"');
 [time count] = fscanf(fileID,'%d');
 
-# Store the source element
-src_pad = from_pad;
-pad_name_list = {to_pad};
+pad_name_list = {element};
 pad_freq_list = 1;
 
 while (count == 1)
@@ -30,24 +28,25 @@ while (count == 1)
     if (count == 0)
         break
     end
-    [from_pad count] = fscanf(fileID,'%s\"');
-    [to_pad count] = fscanf(fileID,'%s\"');
+    %~ [from_pad count] = fscanf(fileID,'%s\"');
+    [element count] = fscanf(fileID,'%s\"');
     [time count] = fscanf(fileID,'%d');
 
     pad_name_list_len = length(pad_name_list);
     for list_idx = 1:pad_name_list_len
-        if (1 == strcmp(char(pad_name_list{list_idx}),to_pad))
+        if (1 == strcmp(char(pad_name_list{list_idx}),element))
             pad_freq_list(list_idx) = pad_freq_list(list_idx) + 1;
             pad_found = TRUE;
         end
     end
     if (pad_found == FALSE)
         pad_name_list_len = length(pad_name_list) + 1;
-        pad_name_list{pad_name_list_len} = to_pad;
+        pad_name_list{pad_name_list_len} = element;
         pad_freq_list(pad_name_list_len) = 1;
     end
     pad_found = FALSE;
 
+    %~ printf('%s %s %s %d\n',timestamp,from_pad,element,time);
 end
 
 if (RESULT)
@@ -70,12 +69,12 @@ while (count == 1)
     if (count == 0)
         break
     end
-    [from_pad count] = fscanf(fileID,'%s\"');
-    [to_pad count] = fscanf(fileID,'%s\"');
+    %~ [from_pad count] = fscanf(fileID,'%s\"');
+    [element count] = fscanf(fileID,'%s\"');
     [time count] = fscanf(fileID,'%d');
     # Match the event with a pad name
     for list_idx = 1:pad_name_list_len
-        if (1 == strcmp(char(pad_name_list{list_idx}),to_pad))
+        if (1 == strcmp(char(pad_name_list{list_idx}),element))
             [timestamp_array] = sscanf(timestamp,'%d:%d:%f]');
             timestamp_val = timestamp_array(3) + (timestamp_array(2) * 60) + timestamp_array(1);
             timestamp_mat(list_idx,data_mat_idx_list(list_idx)) = timestamp_val;
@@ -85,13 +84,14 @@ while (count == 1)
     end
 end
 
-figure('Name','Interlatency')
+figure('Name','Processing time')
 plot(timestamp_mat',time_mat','linewidth',LINEWIDTH)
-title('Interlatency','fontsize',FONTSIZE)
+title('Processing time','fontsize',FONTSIZE)
 xlabel('time (seconds)','fontsize',FONTSIZE)
 ylabel('time (nanoseconds)','fontsize',FONTSIZE)
 legend(pad_name_list)
 
 print tracer -dpdf -append
+
 
 fclose('all');

@@ -1,7 +1,6 @@
 #! /bin/bash
 
-echo "parametros $#"
-
+# Verify if there is at least a parameter
 if [ $# -lt 1 ]
 then
     echo "Error: A directory name must be given"
@@ -12,9 +11,25 @@ then
     echo "Error: $1 is not a directory"
 fi
 
-# Create readable file
-babeltrace $1 > datastream.log
-# Split the events in files
-awk '{print $1,$10,$13,$16}' interlatency.log > interlatency.mat
-# Create plots
-./plot_interlatency.m
+tracer_list=("proctime" "interlatency")
+
+#
+rm -f tracer.pdf
+
+# Loop through the tracer list
+for tracer in "${tracer_list[@]}"
+do
+   # Create readable file
+    babeltrace $1 > datastream.log
+    # Split the events in files
+    grep -w ${tracer} datastream.log > ${tracer}.log
+    # Get data columns
+    awk '{print $1,$10,$13,$16}' ${tracer}.log > ${tracer}.mat
+    # Create plots
+    ./plot_${tracer}.m
+done
+
+
+
+
+
