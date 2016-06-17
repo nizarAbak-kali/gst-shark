@@ -11,7 +11,7 @@ then
     echo "Error: $1 is not a directory"
 fi
 
-tracer_list=("proctime" "interlatency" "framerate")
+tracer_list=("proctime" "interlatency" "framerate" "scheduling")
 
 #
 rm -f tracer.pdf
@@ -19,6 +19,7 @@ rm -f tracer.pdf
 # Loop through the tracer list
 for tracer in "${tracer_list[@]}"
 do
+    echo "Tracer ${tracer}"
    # Create readable file
     babeltrace $1 > datastream.log
     # Split the events in files
