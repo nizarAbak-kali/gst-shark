@@ -31,6 +31,14 @@ do
 done
 
 
-
+echo "Tracer cpuusage"
+# Create readable file
+babeltrace $1 > datastream.log
+# Split the events in files
+grep -w cpuusage datastream.log > cpuusage.log
+# Get data columns
+awk '{print $1,$10,$13,$16,$19,$22,$25,$28,$31}' cpuusage.log > cpuusage.mat
+# Create plots
+./plot_cpuusage.m
 
 
