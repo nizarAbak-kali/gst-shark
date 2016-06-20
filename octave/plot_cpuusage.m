@@ -1,13 +1,13 @@
-#! /usr/bin/octave -qf
+
 
 # Configuration
-RESULT = 1;
+RESULT = 0;
 FONTSIZE = 14;
 LINEWIDTH = 1;
 # CPU_USAGE_AVERAGE = 0 Doesn't displays the average CPU usage.
 # CPU_USAGE_AVERAGE = 1 Displays also the average CPU usage.
 # CPU_USAGE_AVERAGE = 2 Displays only the average CPU usage.
-CPU_USAGE_AVERAGE = 1
+CPU_USAGE_AVERAGE = 1;
 
 # Constants
 TRUE = 1;
@@ -26,7 +26,6 @@ while (1 == count)
     cpu_num = cpu_num + 1;
 end
 cpu_num = cpu_num - 1;
-printf('Cpu num %d\n',cpu_num)
 
 # Move to the beginning of a file
 frewind(fileID)
@@ -40,8 +39,6 @@ while (1 == count)
     end
 end
 
-printf('Event num %d\n',event_count)
-
 
 # Creata matrix to store the data
 # Use cpu_num + 1 to add the average value
@@ -52,7 +49,7 @@ timestamp_mat = nan(cpu_num + 1,event_count);
 frewind(fileID)
 
 cpu_idx = 1;
-count = 1
+count = 1;
 for event_idx = 1 : event_count
 
     [timestamp count] = fscanf(fileID,'[%s]');
@@ -112,6 +109,6 @@ title('CPU usage','fontsize',FONTSIZE)
 xlabel('time (seconds)','fontsize',FONTSIZE)
 ylabel('Usage (%)','fontsize',FONTSIZE)
 
-print tracer -dpdf -append
+
 
 

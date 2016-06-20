@@ -3,7 +3,7 @@
 function [serie_name_list,timestamp_mat,value_mat] = load_serie_timestamp_value(file_name)
 
     # Configuration
-    RESULT = 1;
+    RESULT = 0;
     FONTSIZE = 14;
     LINEWIDTH = 1;
 

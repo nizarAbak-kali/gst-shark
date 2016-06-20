@@ -1,7 +1,7 @@
 #! /usr/bin/octave -qf
 
 # Configuration
-RESULT = 1;
+RESULT = 0;
 FONTSIZE = 14;
 LINEWIDTH = 1;
 
@@ -18,5 +18,5 @@ xlabel('time (seconds)','fontsize',FONTSIZE)
 ylabel('time (nanoseconds)','fontsize',FONTSIZE)
 legend(element_name_list)
 
-print tracer -dpdf -append
+%~ print proctime_fig 'tracer' -dpdf -append
 
