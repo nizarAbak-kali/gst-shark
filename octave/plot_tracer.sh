@@ -4,14 +4,16 @@
 if [ $# -lt 1 ]
 then
     echo "Error: A directory name must be given"
+    exit
 fi
 
 if [ ! -d $1 ]
 then
     echo "Error: $1 is not a directory"
+    exit
 fi
 
-tracer_list=("proctime" "interlatency" "framerate" "scheduling")
+tracer_list=("proctime" "interlatency" "framerate" "scheduling" "cpuusage")
 
 #
 rm -f tracer.pdf
@@ -27,7 +29,6 @@ do
     # Get data columns
     awk '{print $1,$10,$13,$16}' ${tracer}.log > ${tracer}.mat
     # Create plots
-    ./plot_${tracer}.m
 done
 
 
@@ -38,7 +39,8 @@ babeltrace $1 > datastream.log
 grep -w cpuusage datastream.log > cpuusage.log
 # Get data columns
 awk '{print $1,$10,$13,$16,$19,$22,$25,$28,$31}' cpuusage.log > cpuusage.mat
-# Create plots
-./plot_cpuusage.m
 
+
+# Create plots
+octave -qf --persist ./gstshark-plot.m "${tracer_list[@]}"
 
