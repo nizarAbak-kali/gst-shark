@@ -32,7 +32,7 @@ do
 done
 
 
-echo "Tracer cpuusage"
+echo "Loading cpuusage events..."
 # Create readable file
 babeltrace $1 > datastream.log
 # Split the events in files
@@ -47,7 +47,6 @@ shift
 while [[ $# -gt 0 ]]
 do
     key="$1"
-
     case $key in
         -s|--savefig)
         SAVEFIG="--savefig"
@@ -64,7 +63,14 @@ do
     esac
 done
 
+
 # Create plots
 octave -qf ${PERSIST} ./gstshark-plot.m "${tracer_list[@]}" "${SAVEFIG}"
+
+# Remove files
+for tracer in "${tracer_list[@]}"
+do
+    rm ${tracer}.log ${tracer}.mat -f
+done
 
 

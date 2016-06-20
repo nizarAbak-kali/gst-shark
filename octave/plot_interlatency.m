@@ -92,6 +92,4 @@ xlabel('time (seconds)','fontsize',FONTSIZE)
 ylabel('time (nanoseconds)','fontsize',FONTSIZE)
 legend(pad_name_list)
 
-%~ print tracer -dpdf -append
-
-fclose('all');
+fclose(fileID);

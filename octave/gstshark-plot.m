@@ -14,23 +14,23 @@ for i = 1:nargin
 
     switch tracer_name
         case 'cpuusage'
-            disp('cpusage')
+            disp('Processing cpusage...')
             plot_cpuusage
             figs_num = figs_num + 1;
         case 'framerate'
-            disp('framerate')
+            disp('Processing framerate...')
             plot_framerate
             figs_num = figs_num + 1;
         case 'proctime'
-            disp('proctime')
+            disp('Processing proctime...')
             plot_proctime
             figs_num = figs_num + 1;
         case 'interlatency'
-            disp('interlatency')
+            disp('Processing interlatency...')
             plot_interlatency
             figs_num = figs_num + 1;
         case 'scheduling'
-            disp('scheduling')
+            disp('Processing scheduling...')
             plot_scheduling
             figs_num = figs_num + 1;
         case '--savefig'
