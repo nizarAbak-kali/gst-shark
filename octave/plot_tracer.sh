@@ -21,7 +21,7 @@ rm -f tracer.pdf
 # Loop through the tracer list
 for tracer in "${tracer_list[@]}"
 do
-    echo "Tracer ${tracer}"
+    echo "Loading ${tracer} events..."
    # Create readable file
     babeltrace $1 > datastream.log
     # Split the events in files
@@ -40,7 +40,31 @@ grep -w cpuusage datastream.log > cpuusage.log
 # Get data columns
 awk '{print $1,$10,$13,$16,$19,$22,$25,$28,$31}' cpuusage.log > cpuusage.mat
 
+# Skip directory name
+shift
+
+# Parse options
+while [[ $# -gt 0 ]]
+do
+    key="$1"
+
+    case $key in
+        -s|--savefig)
+        SAVEFIG="--savefig"
+        shift # past argument
+        ;;
+        -p|--persist)
+        PERSIST="--persist"
+        shift # past argument
+        ;;
+        *)
+        echo "WARN: unkown \"$key\" option"
+        shift
+        ;;
+    esac
+done
 
 # Create plots
-octave -qf --persist ./gstshark-plot.m "${tracer_list[@]}"
+octave -qf ${PERSIST} ./gstshark-plot.m "${tracer_list[@]}" "${SAVEFIG}"
+
 
