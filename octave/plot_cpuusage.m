@@ -105,6 +105,11 @@ switch CPU_USAGE_AVERAGE
       legend(cpu_name_list)
 end
 
+
+tracer.cpuusage.timestamp_mat = timestamp_mat;
+tracer.cpuusage.cpu = value_mat;
+tracer.cpuusage.cpu_name_list = cpu_name_list;
+
 title('CPU usage','fontsize',FONTSIZE)
 xlabel('time (seconds)','fontsize',FONTSIZE)
 ylabel('Usage (%)','fontsize',FONTSIZE)
