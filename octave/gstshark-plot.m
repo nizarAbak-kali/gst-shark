@@ -3,8 +3,6 @@
 GSTSHARK_SAVEFIG = 0;
 TRUE = 1;
 
-%~ figure_handlers
-
 arg_list = argv ();
 figs_num = 0;
 
@@ -42,9 +40,6 @@ for i = 1:nargin
     end
 end
 
-
-
-
 if (TRUE == GSTSHARK_SAVEFIG)
     disp('Save figures...')
     for fig_idx = 1 : figs_num
@@ -52,7 +47,12 @@ if (TRUE == GSTSHARK_SAVEFIG)
         close
     end
 end
-    
+
+
+if ((1 == isfield(tracer,'cpuusage')) && (1 == isfield(tracer,'framerate')))
+    plot_framerate_cpuusage
+end
+
 printf ("\n")
 
  
