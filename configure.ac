@@ -115,7 +115,7 @@ AC_ARG_ENABLE(
   [enable_static_plugins=no])
 AC_MSG_RESULT([$enable_static_plugins])
 if test "x$enable_static_plugins" = xyes; then
-  AC_DEFINE(GST_SHARK_PLUGIN_BUILD_STATIC, 1,
+  AC_DEFINE(GST_PLUGIN_BUILD_STATIC, 1,
     [Define if static plugins should be built])
   GST_SHARK_PLUGIN_LIBTOOLFLAGS=""
 else
