@@ -1,0 +1,70 @@
+
+
+The interlatency 
+================
+
+measures the time that a buffer takes to travel from one point to another inside the pipeline.
+
+GST_DEBUG="GST_TRACER:7" GST_TRACERS="interlatency" gst-launch-1.0 videotestsrc ! queue ! videorate max-rate=15 ! fakesink sync=true
+
+Processing time 
+===============
+
+developed with the purpose of providing useful information to the user about the time 
+each element of a given pipeline takes processing each data buffer that goes through it.
+
+GST_DEBUG="GST_TRACER:7" GST_TRACERS="proctime" gst-launch-1.0 videotestsrc ! identity sleep-time=8500 ! tee name=t t. ! queue ! identity sleep-time=50000 ! fakesink t. ! queue ! identity sleep-time=30000 ! fakesink
+
+The framerate 
+=============
+
+the measurement of the frame frequency, that means that it is the measurement of the number of frames that go through the source pad of certain element in a given time. Normally frame rate is expressed in frames per second (FPS)
+
+GST_DEBUG="GST_TRACER:7" GST_TRACERS="framerate" gst-launch-1.0 videotestsrc ! videorate max-rate=15 ! fakesink sync=true
+
+The scheduling time tracer 
+==========================
+
+measure the elapsed time since one buffer arrived to the sink pad of the element with the immediate consecutive one, without taking in consideration the time needed for the element to compute the arrived data buffer.
+
+GST_DEBUG="GST_TRACER:7" GST_TRACERS="scheduletime" gst-launch-1.0 v4l2src device=/dev/video0 do-timestamp=true ! 'video/x-raw, format=(string)YUY2, width=(int)1280, height=(int)720, framerate=(fraction)10/1' ! videoconvert ! queue ! avenc_h263p ! fakesink sync=true
+
+
+The CPU usage tracer
+====================
+ 
+measures the load on the CPU at the time of running a determined pipeline. 
+
+GST_DEBUG="GST_TRACER:7" GST_TRACERS="cpuusage" gst-launch-1.0 videotestsrc ! 'video/x-raw, format=(string)YUY2, width=(int)640, height=(int)480, framerate=(fraction)30/1' ! videorate max-rate=30 ! videoconvert ! queue ! avenc_h263p ! queue ! avimux ! fakesink sync=true
+
+The graphic tracer 
+==================
+
+an add-on of the GstShark tracer suit. It does not generate any output log providing any information about the performance of the pipeline neither it helps the user with the debugging process at the time of facing an unexpected issue on the behavior of a pipeline. However, this tracer is very useful since it shows to the user the pipeline graphically so the user can easily inspect it visually.
+
+GST_DEBUG="GST_TRACER:7" GST_TRACERS="graphic" gst-launch-1.0 videotestsrc is-live=true ! tee name=t ! valve drop=TRUE ! queue max-size-buffers=0 ! avenc_ljpeg  multifilesink next-file=0 enable-last-sample=FALSE async=FALSE sync=FALSE location=./example_snapshot_%d.jpg t. ! queue max-size-buffers=0 ! 'video/x-raw, format=(string)YUY2, width=(int)1280, height=(int)720, framerate=(fraction)10/1' ! videoconvert ! queue max-size-buffers=0 ! avenc_h263p ! identity ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=9000000000 ! mux. audiotestsrc ! volume ! avenc_mp2 bitrate=128 ! identity ! queue max-size-buffers=0 max-size-bytes=0 max-size-time=9000000000 ! matroskamux name=mux ! multifilesink next-file=1 location=example_50mb_%s.mkv enable-last-sample=FALSE sync=TRUE async=FALSE
+
+The bitrate tracer
+==================
+
+This tracer is similar to the framerate tracer, but instead of measuring the number of frames produced every second, it measures bits.
+
+GST_DEBUG="GST_TRACER:7" GST_TRACERS="bitrate" gst-launch-1.0 videotestsrc ! 'video/x-raw, format=(string)YUY2, width=(int)640, height=(int)480, framerate=(fraction)30/1' ! videorate max-rate=30 ! videoconvert ! queue ! avenc_h263p ! queue ! avimux ! fakesink sync=true
+
+The Queue Level tracer 
+======================
+
+measures the amount of data queued in every queue element in the pipeline. A new trace will be printed every time a buffer enters a queue.
+
+GST_DEBUG="GST_TRACER:7" GST_TRACERS="queuelevel" gst-launch-1.0 videotestsrc ! 'video/x-raw, format=(string)YUY2, width=(int)640, height=(int)480, framerate=(fraction)30/1' ! videorate max-rate=30 ! videoconvert ! queue max-size-buffers=20 ! avenc_h263p ! queue max-size-time=400000000 ! avimux ! fakesink sync=true
+
+Buffer tracer
+=============
+
+The Buffer tracer prints out information about each buffer that goes out of a source pad of an element.
+
+GST_DEBUG="GST_TRACER:7" GST_TRACERS="buffer" gst-launch-1.0 videotestsrc ! fakesink sync=true
+
+
+
+

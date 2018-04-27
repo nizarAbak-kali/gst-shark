@@ -2,42 +2,41 @@
 
 # Ridgerun GstShark
 
-# Display help message
-if [ $1 == "--help" ]
-then
-    echo "Ridgerun Gstshark"
-    echo
-    echo "usage : $0 DIR [options]"
-    echo
-    echo "  DIR                            Input trace directory"
-    echo "  --help                         This help message"
-    echo "  -s, --savefig [pdf|png]        Save the graphics generated"
-    echo "                                 FORMAT: Output file format, png or pdf"
-    echo "                                 (default: pdf)"
-    echo "  -p, --persist                  keep octave console open"
-    echo "  -l, --legend <inside|outside|extern>"
-    echo "                                 Indicate the position of the legend"
-    echo "                                 over each graphic generated"
-    echo "                                 extern: display the legend over an external window"
-    echo "                                 (default: inside)"
-    echo
-    exit
-fi
+
+set -x
+set -v
+
+# Remove files
+rm -f datastream.log
+rm -f *.html
+rm -f *.csv
+for tracer in "${parser_group_list1[@]}"
+do
+    rm ${tracer}.log ${tracer}.mat -f
+done
+
+for tracer in "${parser_group_list2[@]}"
+do
+    rm ${tracer}.log
+    rm ${tracer}_fields.log ${tracer}_fields.mat -f
+    rm ${tracer}_values.log ${tracer}_values.mat -f
+done
+
 
 # Verify if there is at least a parameter
 if [ $# -lt 1 ]
 then
-    echo "Error: A directory name must be given"
-    echo "Try '$0 --help' for more information."
-    exit
+    WORKFOLDER=$GST_SHARK_LOCATION
+    echo "taking default location $GST_SHARK_LOCATION"
 fi
 
-if [ ! -d $1 ]
+if [ ! -d $1 ] ;
 then
     echo "Error: $1 is not a directory"
     echo "Try '$0 --help' for more information."
     exit
 fi
+
 
 processing_tracer_list=("proctime" "interlatency" "framerate" "scheduling" "cpuusage")
 parser_group_list1=("proctime" "interlatency" "scheduling")
@@ -47,7 +46,7 @@ parser_group_list2=("cpuusage" "framerate")
 rm -f tracer.pdf
 
 # Create readable file
-babeltrace $1 > datastream.log
+babeltrace $WORKFOLDER > datastream.log
 
 # Loop through the tracer list 1
 for tracer in "${parser_group_list1[@]}"
@@ -60,7 +59,7 @@ do
     # Create plots
 done
 
-
+set -x
 # Loop through the tracer list 2
 for tracer in "${parser_group_list2[@]}"
 do
@@ -70,7 +69,7 @@ do
     # Count columns
     COL_RAW=$(awk '{ print NF }' ${tracer}_fields.log)
     COL_END=$(( COL_RAW - 3 ))
-    # Create the awk parameter dinamicaly based in the amount of columns
+    # Create the awk parameter dynamically based in the amount of columns
     COUNTER=11
     AWK_PARAM_FILED_NAME='{print $8'
     AWK_PARAM_FIELD_VALUE='{print $1,$10'
@@ -87,7 +86,7 @@ do
     # Create a file with the timestamp and the list of field values for each event
     awk "$AWK_PARAM_FIELD_VALUE" ${tracer}.log > ${tracer}_values.mat
 done
-
+set +x
 # Skip directory name
 shift
 
@@ -145,19 +144,4 @@ done
 # Create plots
 octave -qf ${PERSIST} ./gstshark-plot.m "${processing_tracer_list[@]}" "${SAVEFIG}" "${FORMAT}" "${LEGEND}"
 
-# Remove files
-rm -f datastream.log
-
-for tracer in "${parser_group_list1[@]}"
-do
-    rm ${tracer}.log ${tracer}.mat -f
-done
-
-for tracer in "${parser_group_list2[@]}"
-do
-    rm ${tracer}.log
-    rm ${tracer}_fields.log ${tracer}_fields.mat -f
-    rm ${tracer}_values.log ${tracer}_values.mat -f
-done
-
-
+python3 gstshark-plot.py
